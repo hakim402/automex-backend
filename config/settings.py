@@ -1,7 +1,7 @@
 """
 config/settings.py
 ───────────────────
-Infinity Backend — Production Django Settings
+IDWE Backend — Production Django Settings
 Uses django-environ for environment variables.
 All secrets and environment-specific values come from .env.
 """
@@ -391,7 +391,7 @@ if not _logs_dir.exists():
 from django.templatetags.static import static   # noqa: E402
 
 UNFOLD = {
-    "SITE_TITLE":     "Infinity",
+    "SITE_TITLE":     "IDWE",
     "SITE_HEADER":    "Dashboard",
     "SITE_SUBHEADER": "Manage your application data",
     "SITE_URL":       "/",
