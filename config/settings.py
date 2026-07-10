@@ -12,6 +12,8 @@ from pathlib import Path
 
 import environ
 
+from config.settings_unfold_additions import UNFOLD_ADDITIONS
+
 # ──────────────────────────────────────────────────────────────────────────────
 # PATH & ENVIRONMENT
 # ──────────────────────────────────────────────────────────────────────────────
@@ -41,6 +43,8 @@ AUTH_USER_MODEL      = "accounts.User"
 INSTALLED_APPS = [
     # Admin theme (must come before django.contrib.admin)
     "unfold",
+    "unfold.contrib.filters",   
+    "unfold.contrib.forms",   
 
     # Django core
     "django.contrib.admin",
@@ -396,7 +400,7 @@ if not _logs_dir.exists():
 from django.templatetags.static import static   # noqa: E402
 
 UNFOLD = {
-    "SITE_TITLE":     "IDWE",
+    "SITE_TITLE":     "AUTOMEX",
     "SITE_HEADER":    "Dashboard",
     "SITE_SUBHEADER": "Manage your application data",
     "SITE_URL":       "/",
@@ -421,4 +425,5 @@ UNFOLD = {
     "STYLES": [
         lambda request: static("css/custom.css"),
     ],
+    **UNFOLD_ADDITIONS,   # <- merge these in, or copy keys manually
 }
