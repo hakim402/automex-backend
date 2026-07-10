@@ -32,7 +32,7 @@ services:
       - ./staticfiles:/app/staticfiles
       - ./media:/app/media
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       DB_HOST: db
       DB_PORT: 5432

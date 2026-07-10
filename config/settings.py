@@ -1,7 +1,7 @@
 """
 config/settings.py
 ───────────────────
-IDWE Backend — Production Django Settings
+AUTOMEX Backend — Production Django Settings
 Uses django-environ for environment variables.
 All secrets and environment-specific values come from .env.
 """
@@ -26,7 +26,6 @@ environ.Env.read_env(BASE_DIR / ".env")   # loads .env from project root
 # ──────────────────────────────────────────────────────────────────────────────
 # CORE SETTINGS
 # ──────────────────────────────────────────────────────────────────────────────
-
 SECRET_KEY           = env("SECRET_KEY")
 DEBUG                = env.bool("DEBUG", default=False)
 ALLOWED_HOSTS        = env.list("ALLOWED_HOSTS", default=[])
@@ -39,7 +38,6 @@ AUTH_USER_MODEL      = "accounts.User"
 # ──────────────────────────────────────────────────────────────────────────────
 # INSTALLED APPS
 # ──────────────────────────────────────────────────────────────────────────────
-
 INSTALLED_APPS = [
     # Admin theme (must come before django.contrib.admin)
     "unfold",
@@ -70,7 +68,6 @@ INSTALLED_APPS = [
 # ──────────────────────────────────────────────────────────────────────────────
 # MIDDLEWARE
 # ──────────────────────────────────────────────────────────────────────────────
-
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -86,7 +83,6 @@ MIDDLEWARE = [
 # ──────────────────────────────────────────────────────────────────────────────
 # TEMPLATES
 # ──────────────────────────────────────────────────────────────────────────────
-
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -106,7 +102,6 @@ TEMPLATES = [
 # ──────────────────────────────────────────────────────────────────────────────
 # DATABASE (PostgreSQL)
 # ──────────────────────────────────────────────────────────────────────────────
-
 DATABASES = {
     "default": {
         "ENGINE":       "django.db.backends.postgresql",
@@ -123,7 +118,6 @@ DATABASES = {
 # ──────────────────────────────────────────────────────────────────────────────
 # AUTHENTICATION & PASSWORD VALIDATION
 # ──────────────────────────────────────────────────────────────────────────────
-
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
@@ -139,7 +133,6 @@ ACCOUNT_LOCK_MINUTES      = env.int("ACCOUNT_LOCK_MINUTES", default=30)
 # ──────────────────────────────────────────────────────────────────────────────
 # SIMPLE JWT
 # ──────────────────────────────────────────────────────────────────────────────
-
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME":  timedelta(minutes=env.int("JWT_ACCESS_TOKEN_LIFETIME_MINUTES", 15)),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=env.int("JWT_REFRESH_TOKEN_LIFETIME_DAYS", 7)),
@@ -159,22 +152,12 @@ SIMPLE_JWT = {
 # ──────────────────────────────────────────────────────────────────────────────
 # GOOGLE OAUTH2
 # ──────────────────────────────────────────────────────────────────────────────
-# Required package: google-auth  (pip install google-auth)
-# The frontend sends the Google ID token (credential) obtained from
-# @react-oauth/google.  We verify it server-side with the client ID below.
-#
-# NEVER commit real values here.  Put them in .env.
-# ──────────────────────────────────────────────────────────────────────────────
-
 GOOGLE_OAUTH2_CLIENT_ID     = env("GOOGLE_OAUTH2_CLIENT_ID")
-# client_secret is only needed for server-side OAuth flows (not used here,
-# since we verify ID tokens from the frontend).  Store it anyway for future use.
 GOOGLE_OAUTH2_CLIENT_SECRET = env("GOOGLE_OAUTH2_CLIENT_SECRET")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CACHES (Redis)
 # ──────────────────────────────────────────────────────────────────────────────
-
 CACHES = {
     "default": {
         "BACKEND":   "django_redis.cache.RedisCache",
@@ -187,7 +170,7 @@ CACHES = {
                 "timeout":         20,
             },
             "RETRY_ON_TIMEOUT": True,
-            "IGNORE_EXCEPTIONS": True,   # degrade gracefully if Redis is down
+            "IGNORE_EXCEPTIONS": True, 
         },
         "KEY_PREFIX": env("CACHE_KEY_PREFIX", default="infinity_cache"),
         "TIMEOUT":    300,
@@ -197,7 +180,6 @@ CACHES = {
 # ──────────────────────────────────────────────────────────────────────────────
 # CELERY
 # ──────────────────────────────────────────────────────────────────────────────
-
 CELERY_BROKER_URL       = env("CELERY_BROKER_URL")
 CELERY_RESULT_BACKEND   = env("REDIS_URL")
 CELERY_ACCEPT_CONTENT   = ["json"]
@@ -225,7 +207,6 @@ CELERY_BEAT_SCHEDULE = {
 # ──────────────────────────────────────────────────────────────────────────────
 # EMAIL (SMTP)
 # ──────────────────────────────────────────────────────────────────────────────
-
 EMAIL_BACKEND       = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST          = env("EMAIL_HOST")
 EMAIL_PORT          = env.int("EMAIL_PORT")
@@ -241,7 +222,6 @@ if DEBUG and not env("EMAIL_HOST_USER", default=""):
 # ──────────────────────────────────────────────────────────────────────────────
 # INTERNATIONALISATION
 # ──────────────────────────────────────────────────────────────────────────────
-
 LANGUAGE_CODE = "en-us"
 TIME_ZONE     = "UTC"
 USE_I18N      = True
@@ -250,7 +230,6 @@ USE_TZ        = True
 # ──────────────────────────────────────────────────────────────────────────────
 # STATIC & MEDIA FILES
 # ──────────────────────────────────────────────────────────────────────────────
-
 STATIC_URL     = "/static/"
 STATIC_ROOT    = env("STATIC_ROOT", default=str(BASE_DIR / "staticfiles"))
 STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
@@ -262,7 +241,6 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # ──────────────────────────────────────────────────────────────────────────────
 # SECURITY HEADERS (production only)
 # ──────────────────────────────────────────────────────────────────────────────
-
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER        = True
     SECURE_CONTENT_TYPE_NOSNIFF      = True
@@ -338,7 +316,7 @@ MAGIC_LINK_EXPIRY_MINUTES        = env.int("MAGIC_LINK_EXPIRY_MINUTES", 15)
 EMAIL_VERIFICATION_EXPIRY_HOURS  = env.int("EMAIL_VERIFICATION_EXPIRY_HOURS", 24)
 PASSWORD_RESET_EXPIRY_MINUTES    = env.int("PASSWORD_RESET_EXPIRY_MINUTES", 30)
 MFA_ENABLED                      = env.bool("MFA_ENABLED", default=False)
-FRONTEND_BASE_URL                = env("FRONTEND_BASE_URL", default="http://localhost:3000")
+FRONTEND_BASE_URL                = env("FRONTEND_BASE_URL", default="https://automex.tech")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # LOGGING
@@ -425,5 +403,5 @@ UNFOLD = {
     "STYLES": [
         lambda request: static("css/custom.css"),
     ],
-    **UNFOLD_ADDITIONS,   # <- merge these in, or copy keys manually
+    **UNFOLD_ADDITIONS,
 }
