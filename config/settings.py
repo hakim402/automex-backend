@@ -11,8 +11,19 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from django.utils.translation import gettext_lazy as _
 
 from config.settings_unfold_additions import UNFOLD_ADDITIONS
+from django.conf.locale import LANG_INFO
+
+# Add Pashto to Django's internal language database
+LANG_INFO['ps'] = {
+    'name': 'Pashto',
+    'name_local': 'پښتو',          # native script
+    'name_translated': 'Pashto',   # English fallback
+    'bidi': True,                  # right-to-left
+    'code': 'ps',
+}
 
 # ──────────────────────────────────────────────────────────────────────────────
 # PATH & ENVIRONMENT
@@ -60,9 +71,16 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "django_celery_beat",
     "django_redis",
+    "parler",
+    "django_filters",
 
     # Local apps
     "apps.accounts",
+    "apps.core",               
+    "apps.content",        
+    "apps.crm",                   
+    "apps.assistant",             
+    "apps.notifications",         
 ]
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -228,6 +246,28 @@ USE_I18N      = True
 USE_TZ        = True
 
 # ──────────────────────────────────────────────────────────────────────────────
+# django-parler needs its own LANGUAGES-derived config 
+# ──────────────────────────────────────────────────────────────────────────────
+PARLER_DEFAULT_LANGUAGE_CODE = "en"
+PARLER_LANGUAGES = {
+    None: (
+        {"code": "en"}, {"code": "es"}, {"code": "de"}, {"code": "fr"},
+        {"code": "it"}, {"code": "nl"}, {"code": "zh-hans"}, {"code": "ar"},
+        {"code": "fa"}, {"code": "ps"},
+    ),
+    "default": {"fallbacks": ["en"], "hide_untranslated": False},
+}
+
+# Django's own LANGUAGES setting parler validates its codes against this
+LANGUAGES = [
+    ("en", _("English")), ("es", _("Spanish")), ("de", _("German")),
+    ("fr", _("French")), ("it", _("Italian")), ("nl", _("Dutch")),
+    ("zh-hans", _("Chinese")), ("ar", _("Arabic")), ("fa", _("Persian")),
+    ("ps", _("Pashto")),
+]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # STATIC & MEDIA FILES
 # ──────────────────────────────────────────────────────────────────────────────
 STATIC_URL     = "/static/"
@@ -289,7 +329,13 @@ REST_FRAMEWORK = {
         "registration":        "5/minute",
         "magic_link_request":  "5/minute",
         "magic_link_verify":   "20/minute",
+        "public_content": "300/minute",
     },
+    "DEFAULT_FILTER_BACKENDS": (              # ← added
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ),
     "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
 }
 
@@ -370,6 +416,7 @@ LOGGING = {
 _logs_dir = BASE_DIR / "logs"
 if not _logs_dir.exists():
     os.makedirs(_logs_dir)
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # UNFOLD ADMIN THEME

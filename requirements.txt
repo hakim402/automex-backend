@@ -22,6 +22,7 @@ django-timezone-field==7.2.1
 django-unfold==0.89.0
 djangorestframework==3.16.0
 djangorestframework_simplejwt==5.5.1
+django-filter==26.1
 drf-spectacular==0.29.0
 filelock==3.18.0
 h11==0.16.0
@@ -71,3 +72,6 @@ whitenoise>=6.0
 gunicorn>=22.0.0
 django-allauth>=65.15.1
 google-auth>=2.29.0
+django-parler>=2.3 
+pytest>=8.0.0
+pytest-django>=4.8.0

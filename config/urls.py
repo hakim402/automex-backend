@@ -9,6 +9,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
      # Client-facing API v1
     path("api/v1/", include("apps.accounts.api.urls", namespace="accounts")),
+    path("api/v1/", include("apps.content.api.urls", namespace="content")),
 
     # OpenAPI schema + Swagger UI (restrict or disable in production)
     path("api/schema/",      SpectacularAPIView.as_view(), name="schema"),
