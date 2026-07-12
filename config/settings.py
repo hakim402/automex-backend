@@ -306,6 +306,15 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_PREFLIGHT_MAX_AGE = 86_400
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Groq API Settings (for AI Assistant)
+# ──────────────────────────────────────────────────────────────────────────────
+GROQ_API_KEY                      = env("GROQ_API_KEY", default="")
+GROQ_API_BASE_URL                 = env("GROQ_API_BASE_URL", default="https://api.groq.com/openai/v1")
+GROQ_MODEL                        = env("GROQ_MODEL", default="openai/gpt-oss-120b")
+GROQ_REQUEST_TIMEOUT_SECONDS       = env.int("GROQ_REQUEST_TIMEOUT_SECONDS", default=20)
+AI_ASSISTANT_MAX_HISTORY_MESSAGES = env.int("AI_ASSISTANT_MAX_HISTORY_MESSAGES", default=20)
+
+# ──────────────────────────────────────────────────────────────────────────────
 # DJANGO REST FRAMEWORK
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -330,6 +339,8 @@ REST_FRAMEWORK = {
         "magic_link_request":  "5/minute",
         "magic_link_verify":   "20/minute",
         "public_content": "300/minute",
+        "public_write": "20/minute",
+        "ai_assistant": "20/minute",
     },
     "DEFAULT_FILTER_BACKENDS": (              # ← added
         "django_filters.rest_framework.DjangoFilterBackend",
@@ -416,6 +427,12 @@ LOGGING = {
 _logs_dir = BASE_DIR / "logs"
 if not _logs_dir.exists():
     os.makedirs(_logs_dir)
+
+
+# =============================================================================
+# ADMIN NOTIFICATION EMAILS
+# =============================================================================
+ADMIN_NOTIFICATION_EMAILS = env.list("ADMIN_NOTIFICATION_EMAILS", default=[]) or [DEFAULT_FROM_EMAIL]
 
 
 # ──────────────────────────────────────────────────────────────────────────────

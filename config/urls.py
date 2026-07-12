@@ -10,6 +10,8 @@ urlpatterns = [
      # Client-facing API v1
     path("api/v1/", include("apps.accounts.api.urls", namespace="accounts")),
     path("api/v1/", include("apps.content.api.urls", namespace="content")),
+    path("api/v1/crm/", include("apps.crm.api.urls", namespace="crm")),
+    path("api/v1/assistant/", include("apps.assistant.api.urls", namespace="assistant")),
 
     # OpenAPI schema + Swagger UI (restrict or disable in production)
     path("api/schema/",      SpectacularAPIView.as_view(), name="schema"),
