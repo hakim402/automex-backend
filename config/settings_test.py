@@ -34,3 +34,10 @@ CACHES = {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
     }
 }
+
+# ─── Force HTTP in tests, avoid HTTPS redirects ──────────────────────────
+SECURE_SSL_REDIRECT = False
+SECURE_PROXY_SSL_HEADER = None       # remove any proxy header triggering HTTPS
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
+USE_X_FORWARDED_HOST = False
