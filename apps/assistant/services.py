@@ -16,7 +16,6 @@ import logging
 import uuid
 
 from django.conf import settings
-from django.utils import timezone
 
 from apps.content.models import Service
 from apps.crm.services import capture_ai_assistant_lead

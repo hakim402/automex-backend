@@ -23,6 +23,12 @@ CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
+# Django's test runner forces DEBUG=False for the duration of any test run
+# (standard behavior — tests should run under production-like conditions),
+# so apps.core.fields.EncryptedJSONField's DEBUG-only fallback key correctly
+# never activates here. Fixed test-only key, never used outside this file.
+FIELD_ENCRYPTION_KEY = "fXi2wZcyWsfGe_qNzYkogWYueklhmKmlmjNDHeeNtrs="
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",

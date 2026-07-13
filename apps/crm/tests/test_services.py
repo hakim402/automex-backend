@@ -13,7 +13,7 @@ from apps.crm import services
 from apps.crm.models import ConsultationBooking, Lead, NewsletterSubscriber
 from apps.notifications.models import Notification
 
-from .factories import create_availability_slot, create_lead
+from .factories import create_availability_slot
 
 pytestmark = pytest.mark.django_db
 

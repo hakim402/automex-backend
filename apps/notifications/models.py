@@ -14,11 +14,10 @@ delivery mechanics through this layer:
 
 Staff can opt in/out per (event_type, channel) via NotificationPreference.
 
-NOTE on secrets: NotificationProviderConfig.credentials is a plain
-JSONField placeholder for MVP. Before handling real API keys/tokens, wire
-this to an encrypted field (e.g. django-cryptography / django-fernet-fields)
-or an external secrets manager — do not store plaintext credentials in the
-database in production.
+NOTE on secrets: NotificationProviderConfig.credentials uses
+apps.core.fields.EncryptedJSONField (Fernet, key in settings.FIELD_ENCRYPTION_KEY)
+— encrypted at rest, not a plain JSONField. See apps/core/fields.py for
+the key-management notes (generate via `manage.py generate_field_encryption_key`).
 """
 from __future__ import annotations
 
@@ -28,6 +27,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from apps.core.fields import EncryptedJSONField
 from apps.core.models import TimeStampedModel, UUIDModel
 
 
@@ -124,7 +124,7 @@ class NotificationProviderConfig(UUIDModel, TimeStampedModel):
         _("provider name"), max_length=100,
         help_text=_("e.g. 'sendgrid', 'twilio', 'slack_webhook', 'whatsapp_cloud_api'."),
     )
-    credentials = models.JSONField(_("credentials"), default=dict, blank=True)
+    credentials = EncryptedJSONField(_("credentials"), blank=True, default=dict)
     config      = models.JSONField(_("extra config"), default=dict, blank=True)
 
     is_active  = models.BooleanField(_("active"), default=True)

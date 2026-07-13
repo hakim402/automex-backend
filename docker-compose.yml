@@ -1,34 +1,41 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15
     restart: unless-stopped
     env_file:
       - .env
-    # --- ADD THIS BLOCK BACK ---
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # REMOVED ports to prevent conflicts with your other projects
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # No ports exposed — intentional, avoids conflicts and doesn't need to
+    # be reachable outside the compose network.
 
   redis:
     image: redis:alpine
     restart: unless-stopped
-    # REMOVED ports to prevent conflicts
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # No ports exposed — intentional.
 
   web:
     build: .
     restart: unless-stopped
     env_file:
       - .env
-    # Optimized Gunicorn for production
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2
     volumes:
-      # Changed to bind mounts so Nginx can access them
+      # Bind mounts so Nginx can serve these directly.
       - ./staticfiles:/app/staticfiles
       - ./media:/app/media
     ports:
@@ -39,8 +46,10 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   celery_worker:
     build: .
@@ -57,8 +66,10 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   celery_beat:
     build: .
@@ -75,9 +86,10 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
 volumes:
   postgres_data:
-  # Removed static_volume and media_volume since we are using bind mounts

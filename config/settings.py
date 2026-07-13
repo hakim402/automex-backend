@@ -14,16 +14,6 @@ import environ
 from django.utils.translation import gettext_lazy as _
 
 from config.settings_unfold_additions import UNFOLD_ADDITIONS
-from django.conf.locale import LANG_INFO
-
-# Add Pashto to Django's internal language database
-LANG_INFO['ps'] = {
-    'name': 'Pashto',
-    'name_local': 'پښتو',          # native script
-    'name_translated': 'Pashto',   # English fallback
-    'bidi': True,                  # right-to-left
-    'code': 'ps',
-}
 
 # ──────────────────────────────────────────────────────────────────────────────
 # PATH & ENVIRONMENT
@@ -40,6 +30,11 @@ environ.Env.read_env(BASE_DIR / ".env")   # loads .env from project root
 SECRET_KEY           = env("SECRET_KEY")
 DEBUG                = env.bool("DEBUG", default=False)
 ALLOWED_HOSTS        = env.list("ALLOWED_HOSTS", default=[])
+
+# Obfuscated admin path — reduces noise from automated /admin/ login-scanning
+# bots (defense in depth; not a substitute for strong passwords/MFA).
+# Defaults to the standard "admin/" so nothing breaks if unset.
+ADMIN_URL_PATH = env("ADMIN_URL_PATH", default="admin/")
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 WSGI_APPLICATION     = "config.wsgi.application"
 ROOT_URLCONF         = "config.urls"
@@ -71,17 +66,33 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "django_celery_beat",
     "django_redis",
-    "parler",
     "django_filters",
+    "parler",
 
     # Local apps
     "apps.accounts",
-    "apps.core",               
-    "apps.content",        
-    "apps.crm",                   
-    "apps.assistant",             
-    "apps.notifications",         
+    "apps.core",
+    "apps.content",
+    "apps.crm",
+    "apps.assistant",
+    "apps.notifications",
 ]
+
+# ──────────────────────────────────────────────────────────────────────────────
+# DJANGO-PARLER (multi-language content translations)
+# ──────────────────────────────────────────────────────────────────────────────
+PARLER_DEFAULT_LANGUAGE_CODE = "en"
+PARLER_LANGUAGES = {
+    None: (
+        {"code": "en"}, {"code": "es"}, {"code": "de"}, {"code": "fr"},
+        {"code": "it"}, {"code": "nl"}, {"code": "zh-hans"}, {"code": "ar"},
+        {"code": "fa"}, {"code": "ps"},
+    ),
+    "default": {
+        "fallbacks": ["en"],
+        "hide_untranslated": False,
+    },
+}
 
 # ──────────────────────────────────────────────────────────────────────────────
 # MIDDLEWARE
@@ -245,27 +256,39 @@ TIME_ZONE     = "UTC"
 USE_I18N      = True
 USE_TZ        = True
 
-# ──────────────────────────────────────────────────────────────────────────────
-# django-parler needs its own LANGUAGES-derived config 
-# ──────────────────────────────────────────────────────────────────────────────
-PARLER_DEFAULT_LANGUAGE_CODE = "en"
-PARLER_LANGUAGES = {
-    None: (
-        {"code": "en"}, {"code": "es"}, {"code": "de"}, {"code": "fr"},
-        {"code": "it"}, {"code": "nl"}, {"code": "zh-hans"}, {"code": "ar"},
-        {"code": "fa"}, {"code": "ps"},
-    ),
-    "default": {"fallbacks": ["en"], "hide_untranslated": False},
-}
+# The 10 storefront languages required by the AUTOMEX MVP doc. Must be
+# declared here (not just in PARLER_LANGUAGES below) since django-parler
+# validates its language codes against this list. ar/fa/ps are RTL.
+#
+# NOTE: Django's built-in language registry (django.conf.locale.LANG_INFO)
+# has no entry for plain "zh" — only region/script variants like "zh-hans",
+# "zh-cn", "zh-tw". Using bare "zh" makes get_language_info("zh") raise
+# KeyError the moment anything calls it (e.g. the admin's language
+# switcher), even though Django accepts "zh" as a *valid* language code
+# elsewhere. We use "zh-hans" (Simplified Chinese) instead, which Django
+# does recognize. Pashto ("ps") isn't in Django's registry at all, so we
+# register it manually below before LANGUAGES is built.
+from django.conf.locale import LANG_INFO  # noqa: E402
 
-# Django's own LANGUAGES setting parler validates its codes against this
+LANG_INFO.setdefault("ps", {
+    "bidi": True,
+    "code": "ps",
+    "name": "Pashto",
+    "name_local": "پښتو",
+})
+
 LANGUAGES = [
-    ("en", _("English")), ("es", _("Spanish")), ("de", _("German")),
-    ("fr", _("French")), ("it", _("Italian")), ("nl", _("Dutch")),
-    ("zh-hans", _("Chinese")), ("ar", _("Arabic")), ("fa", _("Persian")),
+    ("en", _("English")),
+    ("es", _("Spanish")),
+    ("de", _("German")),
+    ("fr", _("French")),
+    ("it", _("Italian")),
+    ("nl", _("Dutch")),
+    ("zh-hans", _("Chinese (Simplified)")),
+    ("ar", _("Arabic")),
+    ("fa", _("Persian")),
     ("ps", _("Pashto")),
 ]
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # STATIC & MEDIA FILES
@@ -294,6 +317,13 @@ if not DEBUG:
     SESSION_COOKIE_HTTPONLY          = True
     CSRF_COOKIE_HTTPONLY             = True
     SECURE_REFERRER_POLICY           = "same-origin"
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+
+# Explicit regardless of DEBUG (Django's own default is already "Lax" —
+# stated here so it's visible in an audit rather than relying on the
+# framework default silently doing the right thing).
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE    = "Lax"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CORS
@@ -306,15 +336,6 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_PREFLIGHT_MAX_AGE = 86_400
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Groq API Settings (for AI Assistant)
-# ──────────────────────────────────────────────────────────────────────────────
-GROQ_API_KEY                      = env("GROQ_API_KEY", default="")
-GROQ_API_BASE_URL                 = env("GROQ_API_BASE_URL", default="https://api.groq.com/openai/v1")
-GROQ_MODEL                        = env("GROQ_MODEL", default="openai/gpt-oss-120b")
-GROQ_REQUEST_TIMEOUT_SECONDS       = env.int("GROQ_REQUEST_TIMEOUT_SECONDS", default=20)
-AI_ASSISTANT_MAX_HISTORY_MESSAGES = env.int("AI_ASSISTANT_MAX_HISTORY_MESSAGES", default=20)
-
-# ──────────────────────────────────────────────────────────────────────────────
 # DJANGO REST FRAMEWORK
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -324,6 +345,11 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
+    ),
+    "DEFAULT_FILTER_BACKENDS": (
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
     ),
     "DEFAULT_SCHEMA_CLASS":    "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
@@ -338,15 +364,10 @@ REST_FRAMEWORK = {
         "registration":        "5/minute",
         "magic_link_request":  "5/minute",
         "magic_link_verify":   "20/minute",
-        "public_content": "300/minute",
-        "public_write": "20/minute",
-        "ai_assistant": "20/minute",
+        "public_content":      "300/minute",
+        "public_write":        "20/minute",
+        "ai_assistant":        "20/minute",
     },
-    "DEFAULT_FILTER_BACKENDS": (              # ← added
-        "django_filters.rest_framework.DjangoFilterBackend",
-        "rest_framework.filters.SearchFilter",
-        "rest_framework.filters.OrderingFilter",
-    ),
     "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
 }
 
@@ -374,6 +395,32 @@ EMAIL_VERIFICATION_EXPIRY_HOURS  = env.int("EMAIL_VERIFICATION_EXPIRY_HOURS", 24
 PASSWORD_RESET_EXPIRY_MINUTES    = env.int("PASSWORD_RESET_EXPIRY_MINUTES", 30)
 MFA_ENABLED                      = env.bool("MFA_ENABLED", default=False)
 FRONTEND_BASE_URL                = env("FRONTEND_BASE_URL", default="https://automex.tech")
+
+# Where lead/quote/booking/newsletter notifications get sent. Falls back to
+# DEFAULT_FROM_EMAIL if unset — set this in .env once you have a real sales
+# inbox, e.g. ADMIN_NOTIFICATION_EMAILS=sales@automex.tech,hello@automex.tech
+ADMIN_NOTIFICATION_EMAILS = env.list("ADMIN_NOTIFICATION_EMAILS", default=[]) or [DEFAULT_FROM_EMAIL]
+
+# ──────────────────────────────────────────────────────────────────────────────
+# AI SALES ASSISTANT (Groq — OpenAI-compatible API)
+# ──────────────────────────────────────────────────────────────────────────────
+# Model deprecation note: Groq retired its Llama chat models (llama-3.3-70b-
+# versatile, llama-3.1-8b-instant) in favor of the openai/gpt-oss family.
+# openai/gpt-oss-120b is the current flagship (quality); openai/gpt-oss-20b
+# is the smaller/faster/cheaper option — swap via GROQ_MODEL, no code change.
+GROQ_API_KEY               = env("GROQ_API_KEY", default="")
+GROQ_API_BASE_URL          = env("GROQ_API_BASE_URL", default="https://api.groq.com/openai/v1")
+GROQ_MODEL                 = env("GROQ_MODEL", default="openai/gpt-oss-120b")
+GROQ_REQUEST_TIMEOUT_SECONDS = env.int("GROQ_REQUEST_TIMEOUT_SECONDS", default=20)
+AI_ASSISTANT_MAX_HISTORY_MESSAGES = env.int("AI_ASSISTANT_MAX_HISTORY_MESSAGES", default=20)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# FIELD-LEVEL ENCRYPTION (apps.core.fields.EncryptedJSONField)
+# ──────────────────────────────────────────────────────────────────────────────
+# Used for NotificationProviderConfig.credentials (SendGrid/Twilio/Slack/
+# WhatsApp API keys once wired up) so secrets aren't sitting in plaintext
+# in the database. Generate with: python manage.py generate_field_encryption_key
+FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default="")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # LOGGING
@@ -427,13 +474,6 @@ LOGGING = {
 _logs_dir = BASE_DIR / "logs"
 if not _logs_dir.exists():
     os.makedirs(_logs_dir)
-
-
-# =============================================================================
-# ADMIN NOTIFICATION EMAILS
-# =============================================================================
-ADMIN_NOTIFICATION_EMAILS = env.list("ADMIN_NOTIFICATION_EMAILS", default=[]) or [DEFAULT_FROM_EMAIL]
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # UNFOLD ADMIN THEME

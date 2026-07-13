@@ -8,7 +8,7 @@ from django.core import mail
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from apps.content.tests.factories import create_industry, create_service
+from apps.content.tests.factories import create_service
 from apps.core.models import APIKey
 from apps.crm.models import ConsultationBooking, Lead, NewsletterSubscriber
 

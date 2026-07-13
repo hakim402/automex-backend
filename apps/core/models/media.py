@@ -14,6 +14,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from .base import TimeStampedModel, UUIDModel
+from apps.core.validators import validate_media_file_extension, validate_media_file_size
 
 
 class MediaAsset(UUIDModel, TimeStampedModel):
@@ -25,7 +26,10 @@ class MediaAsset(UUIDModel, TimeStampedModel):
         OTHER    = "other",    _("Other")
 
     title      = models.CharField(_("title"), max_length=255, blank=True)
-    file       = models.FileField(_("file"), upload_to="media_library/%Y/%m/")
+    file       = models.FileField(
+        _("file"), upload_to="media_library/%Y/%m/",
+        validators=[validate_media_file_extension, validate_media_file_size],
+    )
     file_type  = models.CharField(
         _("file type"), max_length=20, choices=FileType.choices, db_index=True,
     )

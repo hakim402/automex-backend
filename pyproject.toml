@@ -1,0 +1,16 @@
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+exclude = [
+    "*/migrations/*",
+    "staticfiles",
+    "media",
+    ".venv",
+    "venv",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E501",  # line length — advisory job only, not worth blocking on
+]
