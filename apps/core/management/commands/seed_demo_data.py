@@ -543,20 +543,17 @@ class Command(BaseCommand):
         self.stdout.write(f"  CostCalculatorRule: {count}")
 
 
-# ─── Helpers ──────────────────────────────────────────────────────────────
-
 def _slugify(value: str) -> str:
     import re
+
     value = value.lower().strip()
     value = re.sub(r"[^a-z0-9]+", "-", value)
     return value.strip("-")
 
 
 def _truncate_meta_title(title: str, suffix: str, max_len: int = 70) -> str:
-    """Ensure meta_title + suffix does not exceed max_len (default 70)."""
+    """Ensure title + suffix never exceeds seo_translated_fields()'s meta_title max_length (70)."""
     available = max_len - len(suffix)
     if available <= 0:
-        # If suffix is longer than max_len, truncate suffix itself
         return suffix[:max_len]
-    truncated_title = title[:available]
-    return f"{truncated_title}{suffix}"
+    return f"{title[:available]}{suffix}"

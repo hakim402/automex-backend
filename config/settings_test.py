@@ -29,15 +29,19 @@ EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 # never activates here. Fixed test-only key, never used outside this file.
 FIELD_ENCRYPTION_KEY = "fXi2wZcyWsfGe_qNzYkogWYueklhmKmlmjNDHeeNtrs="
 
+# Same root cause as FIELD_ENCRYPTION_KEY above: Django's test runner forces
+# DEBUG=False during any test run, which means settings.py's `if not DEBUG:`
+# block (SECURE_SSL_REDIRECT, secure cookies, HSTS, ...) silently activates
+# here too — breaking the Django/DRF test client, which always talks plain
+# HTTP internally. Explicitly disabled for tests only.
+SECURE_SSL_REDIRECT = False
+SECURE_PROXY_SSL_HEADER = None
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
+USE_X_FORWARDED_HOST = False
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
     }
 }
-
-# ─── Force HTTP in tests, avoid HTTPS redirects ──────────────────────────
-SECURE_SSL_REDIRECT = False
-SECURE_PROXY_SSL_HEADER = None       # remove any proxy header triggering HTTPS
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
-USE_X_FORWARDED_HOST = False

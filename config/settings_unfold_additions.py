@@ -1,27 +1,20 @@
 """
 config/settings_unfold_additions.py
 ─────────────────────────────────────
-Defines UNFOLD_ADDITIONS, merged into the UNFOLD dict in settings.py:
-
-    from config.settings_unfold_additions import UNFOLD_ADDITIONS
-    ...
-    UNFOLD = {
-        ...your existing keys (SITE_TITLE, SITE_LOGO, STYLES, etc.)...
-        **UNFOLD_ADDITIONS,
-    }
-
-Covers every model registered across all 6 apps (accounts, core, content,
-crm, notifications, assistant) so the curated sidebar is complete —
-`SIDEBAR["show_all_applications"] = False` means anything NOT listed here
-is admin-reachable by direct URL but won't appear in the nav.
 """
 
+# ──────────────────────────────────────────────────────────────────────────────
+# 4. UNFOLD dict — additions to your existing UNFOLD = {...} block.
+#    Keep your existing SITE_TITLE / SITE_HEADER / SITE_LOGO / STYLES keys —
+#    just merge these extra keys in alongside them.
+# ──────────────────────────────────────────────────────────────────────────────
+
+from django.templatetags.static import static  # noqa: E402
 from django.urls import reverse_lazy  # noqa: E402
 from django.utils.translation import gettext_lazy as _  # noqa: E402
 
 UNFOLD_ADDITIONS = {
-    # Feeds KPI cards + charts on the admin homepage.
-    # See apps/accounts/dashboard.py::dashboard_callback
+    # Feeds KPI cards + charts on the admin homepage (see dashboard.py)
     "DASHBOARD_CALLBACK": "apps.accounts.dashboard.dashboard_callback",
 
     # Modern indigo/violet enterprise palette (Tailwind color scale).
@@ -41,11 +34,12 @@ UNFOLD_ADDITIONS = {
         },
     },
 
+    # Custom sidebar navigation grouping the accounts app logically instead
+    # of relying on the default alphabetical model list.
     "SIDEBAR": {
         "show_search": True,
         "show_all_applications": False,
         "navigation": [
-            # ── Overview ──────────────────────────────────────────────
             {
                 "title": _("Overview"),
                 "items": [
@@ -56,7 +50,6 @@ UNFOLD_ADDITIONS = {
                     },
                 ],
             },
-            # ── Identity & Access (apps.accounts) ────────────────────
             {
                 "title": _("Identity & Access"),
                 "collapsible": True,
@@ -88,7 +81,6 @@ UNFOLD_ADDITIONS = {
                     },
                 ],
             },
-            # ── Security (apps.accounts) ─────────────────────────────
             {
                 "title": _("Security"),
                 "collapsible": True,
@@ -117,208 +109,6 @@ UNFOLD_ADDITIONS = {
                         "title": _("Password Resets"),
                         "icon": "lock_reset",
                         "link": reverse_lazy("admin:accounts_passwordresettoken_changelist"),
-                    },
-                ],
-            },
-            # ── Content Library (apps.core) ──────────────────────────
-            {
-                "title": _("Content Library"),
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": _("Media Assets"),
-                        "icon": "perm_media",
-                        "link": reverse_lazy("admin:core_mediaasset_changelist"),
-                    },
-                    {
-                        "title": _("Content Revisions"),
-                        "icon": "history",
-                        "link": reverse_lazy("admin:core_contentrevision_changelist"),
-                    },
-                    {
-                        "title": _("SEO Settings"),
-                        "icon": "search",
-                        "link": reverse_lazy("admin:core_seosettings_changelist"),
-                    },
-                    {
-                        "title": _("Redirects"),
-                        "icon": "alt_route",
-                        "link": reverse_lazy("admin:core_redirect_changelist"),
-                    },
-                ],
-            },
-            # ── Website Content (apps.content) ───────────────────────
-            {
-                "title": _("Website Content"),
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": _("Services"),
-                        "icon": "design_services",
-                        "link": reverse_lazy("admin:content_service_changelist"),
-                    },
-                    {
-                        "title": _("Service Categories"),
-                        "icon": "category",
-                        "link": reverse_lazy("admin:content_servicecategory_changelist"),
-                    },
-                    {
-                        "title": _("Case Studies"),
-                        "icon": "cases",
-                        "link": reverse_lazy("admin:content_casestudy_changelist"),
-                    },
-                    {
-                        "title": _("Blog Posts"),
-                        "icon": "article",
-                        "link": reverse_lazy("admin:content_blogpost_changelist"),
-                    },
-                    {
-                        "title": _("Blog Categories"),
-                        "icon": "topic",
-                        "link": reverse_lazy("admin:content_blogcategory_changelist"),
-                    },
-                    {
-                        "title": _("Blog Tags"),
-                        "icon": "sell",
-                        "link": reverse_lazy("admin:content_blogtag_changelist"),
-                    },
-                    {
-                        "title": _("Team Members"),
-                        "icon": "groups",
-                        "link": reverse_lazy("admin:content_teammember_changelist"),
-                    },
-                    {
-                        "title": _("Testimonials"),
-                        "icon": "format_quote",
-                        "link": reverse_lazy("admin:content_testimonial_changelist"),
-                    },
-                    {
-                        "title": _("FAQs"),
-                        "icon": "help",
-                        "link": reverse_lazy("admin:content_faq_changelist"),
-                    },
-                    {
-                        "title": _("Technologies"),
-                        "icon": "code",
-                        "link": reverse_lazy("admin:content_technology_changelist"),
-                    },
-                    {
-                        "title": _("Industries"),
-                        "icon": "factory",
-                        "link": reverse_lazy("admin:content_industry_changelist"),
-                    },
-                    {
-                        "title": _("Process Steps"),
-                        "icon": "timeline",
-                        "link": reverse_lazy("admin:content_processstep_changelist"),
-                    },
-                ],
-            },
-            # ── Sales & CRM (apps.crm) ────────────────────────────────
-            {
-                "title": _("Sales & CRM"),
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": _("Leads"),
-                        "icon": "person_search",
-                        "link": reverse_lazy("admin:crm_lead_changelist"),
-                    },
-                    {
-                        "title": _("Consultation Bookings"),
-                        "icon": "calendar_month",
-                        "link": reverse_lazy("admin:crm_consultationbooking_changelist"),
-                    },
-                    {
-                        "title": _("Availability Slots"),
-                        "icon": "event_available",
-                        "link": reverse_lazy("admin:crm_availabilityslot_changelist"),
-                    },
-                    {
-                        "title": _("Newsletter Subscribers"),
-                        "icon": "mail",
-                        "link": reverse_lazy("admin:crm_newslettersubscriber_changelist"),
-                    },
-                    {
-                        "title": _("Cost Calculator Rules"),
-                        "icon": "calculate",
-                        "link": reverse_lazy("admin:crm_costcalculatorrule_changelist"),
-                    },
-                    {
-                        "title": _("Calculator Submissions"),
-                        "icon": "request_quote",
-                        "link": reverse_lazy("admin:crm_calculatorsubmission_changelist"),
-                    },
-                ],
-            },
-            # ── Notifications (apps.notifications) ───────────────────
-            {
-                "title": _("Notifications"),
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": _("Notifications"),
-                        "icon": "notifications",
-                        "link": reverse_lazy("admin:notifications_notification_changelist"),
-                    },
-                    {
-                        "title": _("Templates"),
-                        "icon": "description",
-                        "link": reverse_lazy("admin:notifications_notificationtemplate_changelist"),
-                    },
-                    {
-                        "title": _("Provider Configs"),
-                        "icon": "settings_input_component",
-                        "link": reverse_lazy("admin:notifications_notificationproviderconfig_changelist"),
-                    },
-                    {
-                        "title": _("Preferences"),
-                        "icon": "tune",
-                        "link": reverse_lazy("admin:notifications_notificationpreference_changelist"),
-                    },
-                ],
-            },
-            # ── AI Assistant (apps.assistant) ─────────────────────────
-            {
-                "title": _("AI Assistant"),
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": _("Conversations"),
-                        "icon": "forum",
-                        "link": reverse_lazy("admin:assistant_aiconversation_changelist"),
-                    },
-                    {
-                        "title": _("Knowledge Base"),
-                        "icon": "psychology",
-                        "link": reverse_lazy("admin:assistant_aiknowledgeentry_changelist"),
-                    },
-                ],
-            },
-            # ── System (framework/infra models, kept out of the way) ─
-            {
-                "title": _("System"),
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": _("Groups"),
-                        "icon": "groups_2",
-                        "link": reverse_lazy("admin:auth_group_changelist"),
-                    },
-                    {
-                        "title": _("Periodic Tasks"),
-                        "icon": "schedule",
-                        "link": reverse_lazy("admin:django_celery_beat_periodictask_changelist"),
-                    },
-                    {
-                        "title": _("Outstanding Tokens"),
-                        "icon": "token",
-                        "link": reverse_lazy("admin:token_blacklist_outstandingtoken_changelist"),
-                    },
-                    {
-                        "title": _("Blacklisted Tokens"),
-                        "icon": "block",
-                        "link": reverse_lazy("admin:token_blacklist_blacklistedtoken_changelist"),
                     },
                 ],
             },
