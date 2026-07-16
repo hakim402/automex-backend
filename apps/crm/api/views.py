@@ -16,6 +16,9 @@ from rest_framework.views import APIView
 
 from apps.core.permissions import HasValidAPIKey
 
+# Added drf-spectacular import
+from drf_spectacular.utils import extend_schema
+
 from .. import services
 from .serializers import (
     AvailableSlotSerializer,
@@ -50,6 +53,10 @@ class PublicReadMixin:
 class ContactLeadCreateView(PublicWriteMixin, generics.GenericAPIView):
     serializer_class = ContactLeadCreateSerializer
 
+    @extend_schema(
+        request=ContactLeadCreateSerializer,
+        responses=LeadAckSerializer,
+    )
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -64,6 +71,10 @@ class ContactLeadCreateView(PublicWriteMixin, generics.GenericAPIView):
 class QuoteRequestCreateView(PublicWriteMixin, generics.GenericAPIView):
     serializer_class = QuoteRequestCreateSerializer
 
+    @extend_schema(
+        request=QuoteRequestCreateSerializer,
+        responses=LeadAckSerializer,
+    )
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -78,6 +89,10 @@ class QuoteRequestCreateView(PublicWriteMixin, generics.GenericAPIView):
 class ConsultationBookingCreateView(PublicWriteMixin, generics.GenericAPIView):
     serializer_class = ConsultationBookingCreateSerializer
 
+    @extend_schema(
+        request=ConsultationBookingCreateSerializer,
+        responses=ConsultationBookingAckSerializer,
+    )
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -88,6 +103,9 @@ class ConsultationBookingCreateView(PublicWriteMixin, generics.GenericAPIView):
 class AvailableSlotsView(PublicReadMixin, APIView):
     """GET ?date=YYYY-MM-DD → open slots + remaining capacity for that date."""
 
+    @extend_schema(
+        responses=AvailableSlotSerializer(many=True),
+    )
     def get(self, request, *args, **kwargs):
         date_param = request.query_params.get("date")
         if not date_param:
@@ -110,6 +128,10 @@ class AvailableSlotsView(PublicReadMixin, APIView):
 class NewsletterSubscribeView(PublicWriteMixin, generics.GenericAPIView):
     serializer_class = NewsletterSubscribeSerializer
 
+    @extend_schema(
+        request=NewsletterSubscribeSerializer,
+        responses=NewsletterSubscriberAckSerializer,
+    )
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)

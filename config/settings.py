@@ -333,7 +333,7 @@ CSRF_COOKIE_SAMESITE    = "Lax"
 
 CORS_ALLOWED_ORIGINS  = env.list("CORS_ALLOWED_ORIGINS", default=[])
 # This ensures Django accepts POST requests from your frontend
-CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=CORS_ALLOWED_ORIGINS + ['https://api.idwe.tech']) 
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=CORS_ALLOWED_ORIGINS + ['https://api.automex.tech']) 
 CORS_ALLOW_CREDENTIALS = True
 CORS_PREFLIGHT_MAX_AGE = 86_400
 

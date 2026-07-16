@@ -16,6 +16,8 @@ from apps.core.permissions import HasValidAPIKey
 
 from .serializers import ChatRequestSerializer, ChatResponseSerializer
 
+from drf_spectacular.utils import extend_schema
+
 
 class ChatView(generics.GenericAPIView):
     authentication_classes = []
@@ -24,6 +26,7 @@ class ChatView(generics.GenericAPIView):
     throttle_scope = "ai_assistant"
     serializer_class = ChatRequestSerializer
 
+    @extend_schema(request=ChatRequestSerializer, responses=ChatResponseSerializer)
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)

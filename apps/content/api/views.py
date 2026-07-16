@@ -47,6 +47,9 @@ from .serializers import (
     TestimonialSerializer,
 )
 
+# Added import for drf-spectacular
+from drf_spectacular.utils import extend_schema_view, extend_schema
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # TAXONOMY (reference/lookup data)
@@ -96,6 +99,10 @@ class FAQViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet):
 # SERVICES
 # ──────────────────────────────────────────────────────────────────────────────
 
+@extend_schema_view(
+    list=extend_schema(responses=ServiceListSerializer(many=True)),
+    retrieve=extend_schema(responses=ServiceDetailSerializer),
+)
 class ServiceViewSet(TranslatedSlugLookupMixin, PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet):
     lookup_field = "slug"
     filterset_class = ServiceFilter
@@ -114,6 +121,10 @@ class ServiceViewSet(TranslatedSlugLookupMixin, PublicContentViewSetMixin, views
 # CASE STUDIES
 # ──────────────────────────────────────────────────────────────────────────────
 
+@extend_schema_view(
+    list=extend_schema(responses=CaseStudyListSerializer(many=True)),
+    retrieve=extend_schema(responses=CaseStudyDetailSerializer),
+)
 class CaseStudyViewSet(TranslatedSlugLookupMixin, PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet):
     lookup_field = "slug"
     filterset_class = CaseStudyFilter
@@ -146,6 +157,10 @@ class BlogTagViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet):
     queryset = BlogTag.objects.all().order_by("name")
 
 
+@extend_schema_view(
+    list=extend_schema(responses=BlogPostListSerializer(many=True)),
+    retrieve=extend_schema(responses=BlogPostDetailSerializer),
+)
 class BlogPostViewSet(TranslatedSlugLookupMixin, PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet):
     lookup_field = "slug"
     filterset_class = BlogPostFilter

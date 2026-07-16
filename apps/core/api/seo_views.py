@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from itertools import chain
 
+from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -17,11 +18,41 @@ from apps.content.models import BlogPost, CaseStudy, Service
 from apps.core.models import MediaAsset, SEOSettings
 from apps.core.permissions import HasValidAPIKey
 
+# Added drf-spectacular imports
+from drf_spectacular.utils import extend_schema, inline_serializer
+
 
 class SEOSettingsView(APIView):
     authentication_classes = []
     permission_classes = [HasValidAPIKey]
 
+    @extend_schema(
+        responses={
+            200: inline_serializer(
+                name="SEOSettingsResponse",
+                fields={
+                    "site_name": serializers.CharField(),
+                    "default_meta_title_suffix": serializers.CharField(),
+                    "default_meta_description": serializers.CharField(),
+                    "default_og_image": serializers.CharField(allow_null=True),
+                    "organization": inline_serializer(
+                        name="Organization",
+                        fields={
+                            "legal_name": serializers.CharField(),
+                            "logo": serializers.CharField(allow_null=True),
+                            "url": serializers.URLField(),
+                            "social_profiles": serializers.JSONField(),
+                            "contact_email": serializers.EmailField(),
+                            "contact_phone": serializers.CharField(),
+                        }
+                    ),
+                    "google_site_verification": serializers.CharField(),
+                    "google_analytics_id": serializers.CharField(),
+                    "google_tag_manager_id": serializers.CharField(),
+                }
+            )
+        }
+    )
     def get(self, request, *args, **kwargs):
         settings_obj = SEOSettings.get_solo()
         return Response({
@@ -49,6 +80,20 @@ class SitemapURLsView(APIView):
     authentication_classes = []
     permission_classes = [HasValidAPIKey]
 
+    @extend_schema(
+        responses={
+            200: inline_serializer(
+                name="SitemapEntry",
+                fields={
+                    "path": serializers.CharField(),
+                    "lastmod": serializers.CharField(),
+                    "changefreq": serializers.CharField(),
+                    "priority": serializers.FloatField(),
+                },
+                many=True
+            )
+        }
+    )
     def get(self, request, *args, **kwargs):
         entries = list(chain(
             (_entry("services", s) for s in Service.objects.published().language("en")),
