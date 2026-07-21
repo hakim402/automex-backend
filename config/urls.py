@@ -1,6 +1,7 @@
 # zfix-backend/config/urls.py
 
 from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include
@@ -26,6 +27,7 @@ urlpatterns = [
     path("api/v1/", include("apps.accounts.api.urls", namespace="accounts")),
     path("api/v1/", include("apps.content.api.urls", namespace="content")),
     path("api/v1/crm/", include("apps.crm.api.urls", namespace="crm")),
+    path("api/v1/notifications/", include("apps.notifications.api.urls", namespace="notifications")),
     path("api/v1/assistant/", include("apps.assistant.api.urls", namespace="assistant")),
     path("api/v1/seo/", include("apps.core.api.urls", namespace="seo")),
 
@@ -39,4 +41,6 @@ if settings.DEBUG:
     urlpatterns += [
         path("api/schema/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     ]
+    # Serve uploaded media files in development (admin thumbnails, uploads, etc.)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

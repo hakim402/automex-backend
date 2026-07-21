@@ -292,6 +292,12 @@ LANGUAGES = [
     ("ps", _("Pashto")),
 ]
 
+# Project locale directory — ships compiled .mo placeholders for languages
+# (like Pashto) that Django doesn't include natively. Without a physical
+# .mo file, check_for_language() returns False and parler's admin forms
+# refuse to initialize.
+LOCALE_PATHS = [BASE_DIR / "locale"]
+
 # ──────────────────────────────────────────────────────────────────────────────
 # STATIC & MEDIA FILES
 # ──────────────────────────────────────────────────────────────────────────────
@@ -378,10 +384,10 @@ REST_FRAMEWORK = {
 # ──────────────────────────────────────────────────────────────────────────────
 
 SPECTACULAR_SETTINGS = {
-    "TITLE":                "Infinity Backend API",
+    "TITLE":                "AUTOMEX Backend API",
     "DESCRIPTION":          (
-        "Enterprise authentication API — registration, Google OAuth2, "
-        "magic link, JWT, RBAC, MFA."
+        "AUTOMEX technology consulting platform — CRM, content management, "
+        "AI sales assistant, notifications, and multi-language storefront API."
     ),
     "VERSION":              "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
@@ -486,7 +492,7 @@ from django.templatetags.static import static   # noqa: E402
 UNFOLD = {
     "SITE_TITLE":     "AUTOMEX",
     "SITE_HEADER":    "Dashboard",
-    "SITE_SUBHEADER": "Manage your application data",
+    "SITE_SUBHEADER": "Enterprise Administration Console",
     "SITE_URL":       "/",
     "SHOW_HISTORY":      True,
     "SHOW_VIEW_ON_SITE": True,
@@ -495,8 +501,8 @@ UNFOLD = {
         "dark":  lambda request: static("logo/light.png"),
     },
     "SITE_ICON": {
-        "light": lambda request: static("icon/light.png"),
-        "dark":  lambda request: static("icon/light.png"),
+        "light": lambda request: static("icon/icon.png"),
+        "dark":  lambda request: static("icon/icon.png"),
     },
     "SITE_FAVICONS": [
         {

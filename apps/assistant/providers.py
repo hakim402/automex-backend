@@ -88,4 +88,35 @@ class GroqProvider(AIProvider):
 
 
 def get_default_provider() -> AIProvider:
+    """
+    Returns a GroqProvider configured from the ThirdPartyIntegration registry
+    if an active AI integration exists, otherwise falls back to settings.
+    """
+    try:
+        from apps.notifications.models import ThirdPartyIntegration
+
+        integration = ThirdPartyIntegration.objects.filter(
+            provider_type=ThirdPartyIntegration.ProviderType.AI,
+            provider_name__icontains="groq",
+            is_active=True,
+        ).first()
+
+        if integration is None:
+            # Try any active AI integration
+            integration = ThirdPartyIntegration.objects.filter(
+                provider_type=ThirdPartyIntegration.ProviderType.AI,
+                is_active=True,
+            ).first()
+
+        if integration:
+            creds = integration.credentials or {}
+            return GroqProvider(
+                api_key=creds.get("api_key", ""),
+                base_url=creds.get("base_url"),
+                model=creds.get("model") or (integration.config or {}).get("model"),
+                timeout=integration.config.get("timeout") if integration.config else None,
+            )
+    except Exception:
+        pass  # Fall through to settings-based config
+
     return GroqProvider()

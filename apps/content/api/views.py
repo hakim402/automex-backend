@@ -14,36 +14,55 @@ from rest_framework import viewsets
 
 from apps.content.models import (
     FAQ,
+    AICapability,
     BlogCategory,
     BlogPost,
     BlogTag,
     CaseStudy,
+    Certification,
     Industry,
+    Partner,
+    PortfolioProject,
     ProcessStep,
     Service,
     ServiceCategory,
     TeamMember,
     Technology,
+    TechExpertiseArea,
     Testimonial,
 )
 
-from .filters import BlogPostFilter, CaseStudyFilter, ServiceFilter
+from .filters import (
+    AICapabilityFilter,
+    BlogPostFilter,
+    CaseStudyFilter,
+    PartnerFilter,
+    PortfolioProjectFilter,
+    ServiceFilter,
+    TechExpertiseAreaFilter,
+)
 from .mixins import PublicContentViewSetMixin, TranslatedSlugLookupMixin
 from .serializers import (
+    AICapabilitySerializer,
     BlogCategorySerializer,
     BlogPostDetailSerializer,
     BlogPostListSerializer,
     BlogTagSerializer,
     CaseStudyDetailSerializer,
     CaseStudyListSerializer,
+    CertificationSerializer,
     FAQSerializer,
     IndustrySerializer,
+    PartnerSerializer,
+    PortfolioProjectDetailSerializer,
+    PortfolioProjectListSerializer,
     ProcessStepSerializer,
     ServiceCategorySerializer,
     ServiceDetailSerializer,
     ServiceListSerializer,
     TeamMemberSerializer,
     TechnologySerializer,
+    TechExpertiseAreaSerializer,
     TestimonialSerializer,
 )
 
@@ -111,7 +130,22 @@ class ServiceViewSet(TranslatedSlugLookupMixin, PublicContentViewSetMixin, views
 
     def get_queryset(self):
         qs = Service.objects.published().language(self.language_code)
-        return qs.select_related("category", "hero_image").prefetch_related("technologies", "industries")
+        return qs.select_related(
+            "category", "hero_image", "thumbnail_image",
+            "video_presentation", "brochure",
+        ).prefetch_related(
+            "technologies", "industries",
+            "hero_images__image",
+            "process_steps__process_step",
+            "deliverables",
+            "add_ons",
+            "comparison_rows",
+            "client_logos__logo",
+            "service_testimonials__testimonial__client_avatar",
+            "documents__file",
+            "slas",
+            "related_services",
+        )
 
     def get_serializer_class(self):
         return ServiceDetailSerializer if self.action == "retrieve" else ServiceListSerializer
@@ -194,3 +228,74 @@ class TestimonialViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSe
         return Testimonial.objects.filter(is_published=True).select_related(
             "client_avatar", "related_case_study", "related_service",
         ).order_by("order")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# PARTNERS & CERTIFICATIONS
+# ──────────────────────────────────────────────────────────────────────────────
+
+class PartnerViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet):
+    serializer_class = PartnerSerializer
+    filterset_class = PartnerFilter
+    lookup_field = "slug"
+
+    def get_queryset(self):
+        return Partner.objects.filter(is_active=True).select_related("logo").order_by("order", "name")
+
+
+class CertificationViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet):
+    serializer_class = CertificationSerializer
+    filterset_fields = ["related_services"]
+
+    def get_queryset(self):
+        return Certification.objects.filter(is_active=True).select_related("badge_image").order_by("order", "name")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# AI CAPABILITIES & TECH EXPERTISE
+# ──────────────────────────────────────────────────────────────────────────────
+
+class AICapabilityViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet):
+    serializer_class = AICapabilitySerializer
+    filterset_class = AICapabilityFilter
+    lookup_field = "slug"
+
+    def get_queryset(self):
+        return AICapability.objects.filter(is_active=True)\
+            .select_related("cover_image")\
+            .prefetch_related("technologies")\
+            .order_by("order", "name")
+
+
+class TechExpertiseAreaViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet):
+    serializer_class = TechExpertiseAreaSerializer
+    filterset_class = TechExpertiseAreaFilter
+    lookup_field = "slug"
+
+    def get_queryset(self):
+        return TechExpertiseArea.objects.filter(is_active=True)\
+            .prefetch_related("technologies", "case_studies")\
+            .order_by("order", "name")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# PORTFOLIO
+# ──────────────────────────────────────────────────────────────────────────────
+
+@extend_schema_view(
+    list=extend_schema(responses=PortfolioProjectListSerializer(many=True)),
+    retrieve=extend_schema(responses=PortfolioProjectDetailSerializer),
+)
+class PortfolioProjectViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet):
+    lookup_field = "slug"
+    filterset_class = PortfolioProjectFilter
+    search_fields = ["title", "short_description", "client_name"]
+    ordering_fields = ["order", "completion_year", "created_at"]
+
+    def get_queryset(self):
+        qs = PortfolioProject.objects.filter(is_published=True)
+        return qs.select_related("cover_image", "industry")\
+            .prefetch_related("technologies", "services", "gallery_images__image")
+
+    def get_serializer_class(self):
+        return PortfolioProjectDetailSerializer if self.action == "retrieve" else PortfolioProjectListSerializer

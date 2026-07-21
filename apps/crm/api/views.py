@@ -7,7 +7,7 @@ business logic lives in apps.crm.services.
 """
 from __future__ import annotations
 
-from datetime import date as date_cls
+from datetime import date as date_cls, timedelta
 
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -113,8 +113,16 @@ class AvailableSlotsView(PublicReadMixin, APIView):
 
         try:
             target_date = date_cls.fromisoformat(date_param)
-        except ValueError:
+        except (ValueError, TypeError):
             return Response({"detail": "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+
+        today = date_cls.today()
+        if target_date < today:
+            return Response({"detail": "Cannot look up availability for past dates."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Cap lookups to 90 days ahead to prevent abuse
+        if target_date > today + timedelta(days=90):
+            return Response({"detail": "Cannot look up availability more than 90 days ahead."}, status=status.HTTP_400_BAD_REQUEST)
 
         results = services.available_slots_for_date(target_date)
         serializer = AvailableSlotSerializer(results, many=True)

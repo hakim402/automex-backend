@@ -24,5 +24,10 @@ router.register("blog/tags", views.BlogTagViewSet, basename="blog-tag")
 router.register("blog/posts", views.BlogPostViewSet, basename="blog-post")
 router.register("team", views.TeamMemberViewSet, basename="team-member")
 router.register("testimonials", views.TestimonialViewSet, basename="testimonial")
+router.register("partners", views.PartnerViewSet, basename="partner")
+router.register("certifications", views.CertificationViewSet, basename="certification")
+router.register("ai-capabilities", views.AICapabilityViewSet, basename="ai-capability")
+router.register("tech-expertise", views.TechExpertiseAreaViewSet, basename="tech-expertise")
+router.register("portfolio", views.PortfolioProjectViewSet, basename="portfolio")
 
 urlpatterns = router.urls

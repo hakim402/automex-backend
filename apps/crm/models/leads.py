@@ -25,6 +25,12 @@ from django.utils.translation import gettext_lazy as _
 from apps.core.models import TimeStampedModel, UUIDModel
 
 
+def _generate_guest_token() -> str:
+    """Generate a secure random token for guest request tracking."""
+    import secrets
+    return secrets.token_urlsafe(48)
+
+
 class Lead(UUIDModel, TimeStampedModel):
     class LeadType(models.TextChoices):
         CONTACT      = "contact",      _("Contact Form")
@@ -44,6 +50,20 @@ class Lead(UUIDModel, TimeStampedModel):
         LOST          = "lost",          _("Lost")
         SPAM          = "spam",          _("Spam")
 
+    class Priority(models.TextChoices):
+        LOW     = "low",     _("Low")
+        NORMAL  = "normal",  _("Normal")
+        HIGH    = "high",    _("High")
+        URGENT  = "urgent",  _("Urgent")
+
+    class SourceChannel(models.TextChoices):
+        WEBSITE   = "website",   _("Website")
+        LINKEDIN  = "linkedin",  _("LinkedIn")
+        REFERRAL  = "referral",  _("Referral")
+        PARTNER   = "partner",   _("Partner")
+        EVENT     = "event",     _("Event")
+        OTHER     = "other",     _("Other")
+
     class BudgetRange(models.TextChoices):
         UNDER_10K     = "under_10k",     _("Under $10,000")
         R10K_50K      = "10k_50k",       _("$10,000 – $50,000")
@@ -57,6 +77,18 @@ class Lead(UUIDModel, TimeStampedModel):
         WITHIN_3_MONTHS = "within_3_months", _("Within 3 months")
         WITHIN_6_MONTHS = "within_6_months", _("Within 6 months")
         FLEXIBLE        = "flexible",         _("Flexible")
+
+    # ── User / Guest link ────────────────────────────────────────────────
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="crm_leads", verbose_name=_("linked user"),
+    )
+    guest_token = models.CharField(
+        _("guest tracking token"), max_length=64, unique=True,
+        null=True, blank=True, db_index=True,
+        help_text=_("Random token allowing guests to track their request status."),
+    )
 
     # ── Contact info ─────────────────────────────────────────────────────
     full_name = models.CharField(_("full name"), max_length=200)
@@ -109,6 +141,17 @@ class Lead(UUIDModel, TimeStampedModel):
         related_name="assigned_leads", verbose_name=_("assigned to"),
     )
 
+    # ── Enterprise fields ────────────────────────────────────────────────
+    priority = models.CharField(
+        _("priority"), max_length=10, choices=Priority.choices, default=Priority.NORMAL, db_index=True,
+    )
+    tags = models.JSONField(_("tags"), default=list, blank=True)
+    expected_close_date = models.DateField(_("expected close date"), null=True, blank=True)
+    source_channel = models.CharField(
+        _("source channel"), max_length=20,
+        choices=SourceChannel.choices, blank=True, db_index=True,
+    )
+
     lost_reason  = models.CharField(_("lost reason"), max_length=255, blank=True)
     converted_at = models.DateTimeField(_("converted at"), null=True, blank=True)
 
@@ -121,10 +164,17 @@ class Lead(UUIDModel, TimeStampedModel):
             models.Index(fields=["lead_type", "status"], name="idx_lead_type_status"),
             models.Index(fields=["email"], name="idx_lead_email"),
             models.Index(fields=["assigned_to", "status"], name="idx_lead_assigned_status"),
+            models.Index(fields=["user", "status"], name="idx_lead_user_status"),
+            models.Index(fields=["priority", "status"], name="idx_lead_priority_status"),
         ]
 
     def __str__(self) -> str:
         return f"{self.full_name} <{self.email}> — {self.get_lead_type_display()}"
+
+    def save(self, *args, **kwargs):
+        if not self.guest_token and not self.user_id:
+            self.guest_token = _generate_guest_token()
+        super().save(*args, **kwargs)
 
 
 class QuoteRequestDetail(UUIDModel, TimeStampedModel):
@@ -145,6 +195,21 @@ class QuoteRequestDetail(UUIDModel, TimeStampedModel):
         _("estimated budget (max)"), max_digits=12, decimal_places=2, null=True, blank=True,
     )
     currency = models.CharField(_("currency"), max_length=3, default="USD")
+
+    # ── Enterprise fields ────────────────────────────────────────────────
+    attachments = models.ManyToManyField(
+        "core.MediaAsset", blank=True,
+        related_name="quote_details", verbose_name=_("attachments"),
+    )
+    version = models.PositiveIntegerField(_("version"), default=1)
+    admin_notes = models.TextField(_("admin notes"), blank=True)
+    quoted_price_min = models.DecimalField(
+        _("quoted price (min)"), max_digits=12, decimal_places=2, null=True, blank=True,
+    )
+    quoted_price_max = models.DecimalField(
+        _("quoted price (max)"), max_digits=12, decimal_places=2, null=True, blank=True,
+    )
+    quoted_currency = models.CharField(_("quoted currency"), max_length=3, default="USD", blank=True)
 
     class Meta:
         verbose_name        = _("quote request detail")
@@ -175,6 +240,18 @@ class LeadActivity(UUIDModel, TimeStampedModel):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL, null=True, blank=True,
         related_name="+", verbose_name=_("performed by"),
+    )
+
+    # ── Message thread fields ────────────────────────────────────────────
+    message = models.TextField(_("message"), blank=True)
+    is_customer_visible = models.BooleanField(
+        _("customer visible"), default=False,
+        help_text=_("If True, this activity/message is visible to the customer in their dashboard."),
+    )
+    attachment = models.ForeignKey(
+        "core.MediaAsset",
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="+", verbose_name=_("attachment"),
     )
 
     class Meta:

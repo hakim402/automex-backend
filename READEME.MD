@@ -1,325 +1,214 @@
-# 🚀 Infinity Backend
+# AUTOMEX Backend
 
-A production-ready Django REST Framework backend powered by:
+Enterprise technology consulting platform — CRM, content management, AI sales assistant, multi-channel notifications, and multi-language storefront API.
 
-* Django
-* Django REST Framework
-* PostgreSQL
-* Redis
-* Celery Worker
-* Celery Beat
-* Gunicorn
-* Docker Compose
+## Tech Stack
 
----
+| Category | Technology |
+|---|---|
+| Framework | Django 5 + Django REST Framework |
+| Admin | Unfold (modern enterprise admin theme) |
+| Database | PostgreSQL |
+| Cache / Queue | Redis |
+| Tasks | Celery Worker + Celery Beat |
+| API Docs | drf-spectacular (OpenAPI 3) |
+| Auth | SimpleJWT + Google OAuth2 |
+| i18n | django-parler (10 languages including RTL) |
+| Serve | Gunicorn + Whitenoise |
+| Infra | Docker Compose |
 
-# 📋 Prerequisites
+## Prerequisites
 
-Before getting started, install:
-
-* Docker
-* Docker Compose
-* Git
-
-Verify installation:
+- Docker & Docker Compose
+- Git
 
 ```bash
 docker --version
 docker compose version
-git --version
 ```
 
----
-
-# 📥 Clone Repository
+## Quick Start
 
 ```bash
-git clone <repository-url>
-cd infinity-backend
+# Clone and enter
+git clone <repo-url>
+cd automex-backend
+
+# Copy and fill in environment variables
+cp .env.example .env   # edit with your values
+
+# Build and start all services
+docker compose up -d --build
+
+# Apply migrations and create admin
+docker compose exec web python manage.py migrate
+docker compose exec web python manage.py createsuperuser
+
+# Done — access at http://localhost:8000/admin
 ```
 
----
+## Environment Variables
 
-# ⚙️ Environment Variables
-
-Create a `.env` file in the project root:
+Create `.env` from the template below. See `config/settings.py` for defaults.
 
 ```env
+# Django
 DEBUG=True
+SECRET_KEY=your-secret-key-here
+ALLOWED_HOSTS=localhost,127.0.0.1
 
-SECRET_KEY=your-secret-key
-
-DB_NAME=infinity_db
+# Database
+DB_NAME=automex_db
 DB_USER=postgres
 DB_PASSWORD=password
 DB_HOST=db
 DB_PORT=5432
+DB_SSL_MODE=disable
 
+# Redis / Celery
+REDIS_URL=redis://redis:6379/0
+CELERY_BROKER_URL=redis://redis:6379/1
+
+# JWT
+JWT_SIGNING_KEY=your-jwt-signing-key
+JWT_ACCESS_TOKEN_LIFETIME_MINUTES=15
+JWT_REFRESH_TOKEN_LIFETIME_DAYS=7
+
+# Google OAuth2
+GOOGLE_OAUTH2_CLIENT_ID=your-client-id
+GOOGLE_OAUTH2_CLIENT_SECRET=your-client-secret
+
+# Email (SMTP)
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
-EMAIL_HOST_USER=your_email@gmail.com
-EMAIL_HOST_PASSWORD=your_app_password
+EMAIL_HOST_USER=your-email@gmail.com
+EMAIL_HOST_PASSWORD=your-app-password
 EMAIL_USE_TLS=True
+DEFAULT_FROM_EMAIL=noreply@automex.tech
 
+# AI Assistant (Groq — OpenAI-compatible)
+GROQ_API_KEY=your-groq-api-key
+GROQ_MODEL=openai/gpt-oss-120b
+
+# Frontend
 FRONTEND_BASE_URL=http://localhost:3000
+CORS_ALLOWED_ORIGINS=http://localhost:3000
+
+# Encryption (generate with: python manage.py generate_field_encryption_key)
+FIELD_ENCRYPTION_KEY=your-fernet-key
+
+# Optional
+ADMIN_URL_PATH=admin/
+ADMIN_NOTIFICATION_EMAILS=sales@automex.tech
+MFA_ENABLED=False
+CACHE_KEY_PREFIX=automex_cache
 ```
 
-Update the values according to your environment.
+## Services
 
----
+| Service | Role | Port |
+|---|---|---|
+| `web` | Django + Gunicorn | 8000 |
+| `db` | PostgreSQL | 5432 |
+| `redis` | Redis cache + broker | 6379 |
+| `celery_worker` | Background tasks | — |
+| `celery_beat` | Scheduled tasks (DB scheduler) | — |
 
-# 🐳 Start Project
+## Project Structure
 
-Build and start all services:
-
-```bash
-docker compose up -d --build
 ```
-
-Verify services:
-
-```bash
-docker compose ps
-```
-
----
-
-# 🗄 Database Setup
-
-Apply migrations:
-
-```bash
-docker compose exec web python manage.py migrate
-```
-
-Create admin user:
-
-```bash
-docker compose exec web python manage.py createsuperuser
-```
-
----
-
-# 🌐 Access Application
-
-API:
-
-```text
-http://localhost:8000
-```
-
-Admin:
-
-```text
-http://localhost:8000/admin
-```
-
----
-
-# 🏗 Services
-
-| Service       | Description       |
-| ------------- | ----------------- |
-| web           | Django + Gunicorn |
-| db            | PostgreSQL        |
-| redis         | Redis             |
-| celery_worker | Background Tasks  |
-| celery_beat   | Scheduled Tasks   |
-
----
-
-# 📂 Project Structure
-
-```text
-infinity-backend/
-│
+automex-backend/
 ├── apps/
-├── config/
-├── media/
-├── static/
+│   ├── accounts/       # Users, tenants, RBAC, MFA, JWT sessions
+│   ├── core/           # Media assets, SEO, redirects, API keys
+│   ├── content/        # Services, case studies, blog, portfolio, team
+│   ├── crm/            # Leads, bookings, support tickets, calculator
+│   ├── assistant/      # AI sales assistant + knowledge base
+│   └── notifications/  # Multi-channel notifications + integrations
+├── config/             # Django settings, URLs, WSGI/ASGI, Celery
+├── static/             # Custom CSS, logos, icons
+├── templates/          # Admin dashboard override
+├── doc/                # API guides and architecture docs
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
 ├── manage.py
-└── .env
+└── pytest.ini
 ```
 
----
+## Admin Panel
 
-# 🔄 Development Workflow
+The admin runs **Unfold** — a modern enterprise theme with:
+- Dashboard KPI cards + Chart.js analytics
+- Curated sidebar navigation across all 6 apps
+- Colored status badges, tabbed change forms, bulk actions
+- 10-language django-parler translation tabs
+- Editorial workflow (Draft → Review → Publish → Archive)
 
-## Code Changes
+## Development
 
 ```bash
+# Code changes — restart web
 docker compose restart web
-```
 
----
-
-## Model Changes
-
-```bash
+# Model changes — migrate
 docker compose exec web python manage.py makemigrations
-
 docker compose exec web python manage.py migrate
 
-docker compose restart
-```
-
----
-
-## Static File Changes
-
-```bash
+# Static files
 docker compose exec web python manage.py collectstatic --noinput
 
-docker compose restart web
-```
-
----
-
-## Celery Changes
-
-```bash
-docker compose restart celery_worker
-
-docker compose restart celery_beat
-```
-
----
-
-## New Package Added
-
-After updating requirements.txt:
-
-```bash
+# New packages — rebuild
 docker compose build
-
 docker compose up -d
-```
 
----
-
-## Dockerfile Changes
-
-```bash
+# Clean rebuild
 docker compose build --no-cache
-
 docker compose up -d
 ```
 
----
-
-## docker-compose.yml Changes
-
-```bash
-docker compose down
-
-docker compose up -d
-```
-
----
-
-# 🚀 Deployment Workflow
-
-After pulling new code:
-
-```bash
-git pull
-
-docker compose build
-
-docker compose up -d
-
-docker compose exec web python manage.py migrate
-
-docker compose exec web python manage.py collectstatic --noinput
-
-docker compose restart
-```
-
----
-
-# 🩺 Monitoring & Logs
-
-View all logs:
-
-```bash
-docker compose logs -f
-```
-
-View Django logs:
-
-```bash
-docker compose logs -f web
-```
-
-View Celery Worker logs:
-
-```bash
-docker compose logs -f celery_worker
-```
-
-View Celery Beat logs:
-
-```bash
-docker compose logs -f celery_beat
-```
-
-Check running containers:
-
-```bash
-docker compose ps
-```
-
----
-
-# 🧪 Running Tests
+## Testing
 
 ```bash
 docker compose exec web pytest
-```
 
-Run specific tests:
-
-```bash
+# Specific app with verbose output
 docker compose exec web pytest apps/accounts/tests -v
-```
 
-Coverage:
-
-```bash
+# Coverage report
 docker compose exec web pytest --cov=apps --cov-report=term-missing
 ```
 
----
-
-# 🚨 Emergency Recovery
+## Logs
 
 ```bash
-docker compose down
+docker compose logs -f              # all services
+docker compose logs -f web          # Django
+docker compose logs -f celery_worker
+docker compose logs -f celery_beat
+```
 
-docker compose build --no-cache
+## Deployment
 
+```bash
+git pull
+docker compose build
 docker compose up -d
-
 docker compose exec web python manage.py migrate
-
 docker compose exec web python manage.py collectstatic --noinput
+docker compose restart
+```
+
+## API Documentation
+
+OpenAPI schema available at:
+
+```
+http://localhost:8000/api/schema/
+http://localhost:8000/api/docs/     # Swagger UI
+http://localhost:8000/api/redoc/    # ReDoc
 ```
 
 ---
 
-# 👨‍💻 Author
-
-Infinity Solutions
-
-Built with:
-
-* Django
-* Django REST Framework
-* PostgreSQL
-* Redis
-* Celery
-* Gunicorn
-* Docker Compose
+Built with Django, DRF, PostgreSQL, Redis, Celery, and Unfold.

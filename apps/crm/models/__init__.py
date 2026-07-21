@@ -8,6 +8,7 @@ Re-exports every CRM model:
 from .leads import Lead, LeadActivity, NewsletterSubscriber, QuoteRequestDetail
 from .booking import AvailabilitySlot, ConsultationBooking
 from .calculator import CalculatorSubmission, ComplexityTier, CostCalculatorRule
+from .tickets import SupportTicket, SupportTicketMessage
 
 __all__ = [
     "Lead",
@@ -19,4 +20,6 @@ __all__ = [
     "ComplexityTier",
     "CostCalculatorRule",
     "CalculatorSubmission",
+    "SupportTicket",
+    "SupportTicketMessage",
 ]

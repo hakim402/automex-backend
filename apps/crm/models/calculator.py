@@ -7,6 +7,7 @@ as a CalculatorSubmission and optionally linked to a captured Lead.
 """
 from __future__ import annotations
 
+from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -86,6 +87,19 @@ class CalculatorSubmission(UUIDModel, TimeStampedModel):
     currency = models.CharField(_("currency"), max_length=3, default="USD")
 
     ip_address = models.GenericIPAddressField(_("IP address"), null=True, blank=True)
+
+    # ── Enterprise fields ────────────────────────────────────────────────
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="calculator_submissions", verbose_name=_("linked user"),
+    )
+    converted_to_lead = models.BooleanField(_("converted to lead"), default=False)
+    converted_lead = models.ForeignKey(
+        "crm.Lead",
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="+", verbose_name=_("converted lead"),
+    )
 
     class Meta:
         ordering            = ["-created_at"]

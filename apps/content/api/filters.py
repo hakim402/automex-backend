@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import django_filters as filters
 
-from apps.content.models import BlogPost, CaseStudy, Service
+from apps.content.models import AICapability, BlogPost, CaseStudy, Partner, PortfolioProject, Service, TechExpertiseArea
 
 
 class ServiceFilter(filters.FilterSet):
@@ -40,3 +40,41 @@ class BlogPostFilter(filters.FilterSet):
     class Meta:
         model = BlogPost
         fields = ["category", "tag", "is_featured"]
+
+
+class PartnerFilter(filters.FilterSet):
+    partner_type = filters.CharFilter(field_name="partner_type")
+    tier         = filters.CharFilter(field_name="tier")
+    is_active    = filters.BooleanFilter(field_name="is_active")
+
+    class Meta:
+        model = Partner
+        fields = ["partner_type", "tier", "is_active"]
+
+
+class AICapabilityFilter(filters.FilterSet):
+    category       = filters.CharFilter(field_name="category")
+    maturity_level = filters.CharFilter(field_name="maturity_level")
+
+    class Meta:
+        model = AICapability
+        fields = ["category", "maturity_level"]
+
+
+class TechExpertiseAreaFilter(filters.FilterSet):
+    category = filters.CharFilter(field_name="category")
+
+    class Meta:
+        model = TechExpertiseArea
+        fields = ["category"]
+
+
+class PortfolioProjectFilter(filters.FilterSet):
+    industry    = filters.CharFilter(field_name="industry__translations__slug")
+    technology  = filters.CharFilter(field_name="technologies__slug")
+    service     = filters.CharFilter(field_name="services__translations__slug")
+    is_featured = filters.BooleanFilter(field_name="is_featured")
+
+    class Meta:
+        model = PortfolioProject
+        fields = ["industry", "technology", "service", "is_featured"]

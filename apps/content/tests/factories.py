@@ -9,15 +9,20 @@ from __future__ import annotations
 from django.utils import timezone
 
 from apps.content.models import (
+    AICapability,
     BlogCategory,
     BlogPost,
     BlogTag,
     CaseStudy,
+    Certification,
     FAQ,
     Industry,
+    Partner,
+    PortfolioProject,
     ServiceCategory,
     Technology,
     Service,
+    TechExpertiseArea,
     TeamMember,
     Testimonial,
 )
@@ -148,3 +153,51 @@ def create_testimonial(**kwargs) -> Testimonial:
     defaults = dict(client_name="John Smith", client_company="Acme Corp", quote="Great team to work with.")
     defaults.update(kwargs)
     return Testimonial.objects.create(**defaults)
+
+
+def create_partner(**kwargs) -> Partner:
+    defaults = dict(
+        name="AWS", slug="aws", partner_type=Partner.PartnerType.CLOUD,
+        tier=Partner.Tier.PLATINUM, description="Cloud infrastructure partner.", is_active=True,
+    )
+    defaults.update(kwargs)
+    return Partner.objects.create(**defaults)
+
+
+def create_certification(**kwargs) -> Certification:
+    defaults = dict(name="ISO 27001", issuer="BSI Group", is_active=True)
+    defaults.update(kwargs)
+    return Certification.objects.create(**defaults)
+
+
+def create_ai_capability(**kwargs) -> AICapability:
+    defaults = dict(
+        name="Natural Language Processing", slug="nlp",
+        description="Advanced NLP capabilities.",
+        category=AICapability.Category.NLP,
+        maturity_level=AICapability.MaturityLevel.PRODUCTION,
+        is_active=True,
+    )
+    defaults.update(kwargs)
+    return AICapability.objects.create(**defaults)
+
+
+def create_tech_expertise(**kwargs) -> TechExpertiseArea:
+    defaults = dict(
+        name="Cloud Architecture", slug="cloud-architecture",
+        description="Expert cloud architecture services.",
+        category=TechExpertiseArea.Category.CLOUD,
+        is_active=True,
+    )
+    defaults.update(kwargs)
+    return TechExpertiseArea.objects.create(**defaults)
+
+
+def create_portfolio_project(**kwargs) -> PortfolioProject:
+    defaults = dict(
+        title="E-Commerce Platform", slug="e-commerce-platform",
+        short_description="Full-featured e-commerce platform.",
+        completion_year=2024, is_published=True,
+    )
+    defaults.update(kwargs)
+    return PortfolioProject.objects.create(**defaults)

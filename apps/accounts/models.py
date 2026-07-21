@@ -7,26 +7,13 @@
 """
 from __future__ import annotations
 
-import uuid
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# HELPERS
-# ──────────────────────────────────────────────────────────────────────────────
-
-def _uuid_pk() -> models.UUIDField:
-    """Shared UUID primary-key definition used across all models."""
-    return models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False,
-        db_index=True,
-    )
+from apps.core.models import uuid_pk
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -49,7 +36,7 @@ class Tenant(models.Model):
         PRO        = "pro",        _("Pro")
         ENTERPRISE = "enterprise", _("Enterprise")
 
-    id                = _uuid_pk()
+    id                = uuid_pk()
     name              = models.CharField(_("name"), max_length=255)
     slug              = models.SlugField(
         _("slug"), max_length=100, unique=True,
@@ -171,7 +158,7 @@ class User(AbstractBaseUser):
         CLIENT     = "client",     _("Client")
 
     # ── Identity ──────────────────────────────────────────────────────────────
-    id        = _uuid_pk()
+    id        = uuid_pk()
     email = models.EmailField(
     _("email address"),
     max_length=255,
@@ -396,7 +383,7 @@ class UserProfile(models.Model):
     Created automatically via post_save signal when a User is first saved.
     """
 
-    id   = _uuid_pk()
+    id   = uuid_pk()
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
@@ -463,7 +450,7 @@ class AbstractToken(models.Model):
     Hash the candidate before every look-up.
     """
 
-    id         = _uuid_pk()
+    id         = uuid_pk()
     user       = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -598,7 +585,7 @@ class UserRefreshToken(models.Model):
     4. Sweep  → Celery task deletes records where expires_at < now().
     """
 
-    id         = _uuid_pk()
+    id         = uuid_pk()
     user       = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -657,7 +644,7 @@ class Permission(models.Model):
     Assigned to Roles, never directly to Users.
     """
 
-    id            = _uuid_pk()
+    id            = uuid_pk()
     codename      = models.CharField(
         _("codename"), max_length=100, unique=True,
         help_text=_("Machine-readable key, e.g. 'project:delete'."),
@@ -686,7 +673,7 @@ class Role(models.Model):
     Assigned to Users via UserRoleAssignment (supports expiry).
     """
 
-    id          = _uuid_pk()
+    id          = uuid_pk()
     name        = models.CharField(_("name"), max_length=100, unique=True)
     description = models.TextField(_("description"), blank=True)
     permissions = models.ManyToManyField(
@@ -712,7 +699,7 @@ class UserRoleAssignment(models.Model):
     Supports time-limited grants (e.g. temporary elevated access).
     """
 
-    id          = _uuid_pk()
+    id          = uuid_pk()
     user        = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -784,7 +771,7 @@ class UserMFA(models.Model):
         TOTP     = "totp",     _("TOTP (Authenticator App)")
         WEBAUTHN = "webauthn", _("WebAuthn (Hardware Key / Passkey)")
 
-    id                = _uuid_pk()
+    id                = uuid_pk()
     user              = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

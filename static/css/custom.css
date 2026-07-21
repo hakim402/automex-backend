@@ -1,0 +1,352 @@
+/* ──────────────────────────────────────────────────────────────────────────────
+   AUTOMEX Enterprise Admin — Custom Design System
+   Extends Unfold's base with refined enterprise aesthetics.
+   ────────────────────────────────────────────────────────────────────────────── */
+
+/* ── CSS Variables — Enterprise palette refinements ────────────────────────── */
+:root {
+  --automex-card-radius: 12px;
+  --automex-transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --automex-transition-smooth: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --automex-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --automex-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --automex-ring: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+/* ── Dashboard — KPI cards ─────────────────────────────────────────────────── */
+.dashboard .flex-wrap > .card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--automex-card-radius);
+  box-shadow: var(--automex-shadow-sm);
+  transition: box-shadow var(--automex-transition-smooth), transform var(--automex-transition-smooth);
+  border: 1px solid transparent;
+}
+.dashboard .flex-wrap > .card:hover {
+  box-shadow: var(--automex-shadow-md);
+  transform: translateY(-1px);
+  border-color: rgba(99, 102, 241, 0.12);
+}
+.dashboard .flex-wrap > .card .card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.25rem;
+}
+
+/* KPI metric typography */
+.dashboard .flex-wrap h2,
+.dashboard .flex-wrap .font-semibold {
+  font-size: clamp(1.375rem, 4vw, 1.875rem);
+  line-height: 1.15;
+  word-break: break-word;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* KPI card title accent bar */
+.dashboard .flex-wrap > .card .card-body > div:first-child {
+  position: relative;
+  padding-left: 0.75rem;
+}
+.dashboard .flex-wrap > .card .card-body > div:first-child::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  width: 3px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgb(99, 102, 241), rgb(139, 92, 246));
+}
+
+/* KPI footer */
+.dashboard .flex-wrap .text-font-subtle-light {
+  font-size: 0.75rem;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+/* Warning/attention KPI cards */
+.kpi-warning .card-body > div:first-child::before {
+  background: linear-gradient(180deg, rgb(245, 158, 11), rgb(249, 115, 22)) !important;
+}
+.kpi-danger .card-body > div:first-child::before {
+  background: linear-gradient(180deg, rgb(239, 68, 68), rgb(220, 38, 38)) !important;
+}
+.kpi-success .card-body > div:first-child::before {
+  background: linear-gradient(180deg, rgb(34, 197, 94), rgb(16, 185, 129)) !important;
+}
+
+/* ── Dashboard — Chart cards ───────────────────────────────────────────────── */
+.dashboard .card canvas {
+  max-height: 280px;
+}
+
+/* ── Change-list tables ────────────────────────────────────────────────────── */
+#result_list {
+  border-radius: var(--automex-card-radius);
+  overflow: hidden;
+  box-shadow: var(--automex-shadow-sm);
+}
+#result_list thead th {
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.75rem 1rem;
+  border-bottom-width: 2px;
+}
+#result_list tbody tr {
+  transition: background-color var(--automex-transition-fast);
+}
+#result_list tbody tr:hover {
+  background-color: rgba(99, 102, 241, 0.03);
+}
+#result_list tbody td {
+  padding: 0.625rem 1rem;
+  vertical-align: middle;
+}
+
+/* Status badge refinements */
+#result_list .unfold-badge {
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  border-radius: 6px;
+}
+
+/* ── Tabular inline forms ──────────────────────────────────────────────────── */
+@media (min-width: 768px) {
+  .tabular-inline .form-row .field-box {
+    min-width: 140px;
+  }
+  .tabular-inline .form-row .field-description,
+  .tabular-inline .form-row .field-body,
+  .tabular-inline .form-row .field-message {
+    min-width: 220px;
+  }
+}
+.inline-group .tabular tr.dynamic-form {
+  transition: background-color var(--automex-transition-fast);
+}
+.inline-group .tabular tr.dynamic-form:hover {
+  background-color: rgba(99, 102, 241, 0.025);
+}
+.inline-group .tabular tr.dynamic-form td {
+  padding: 0.5rem 0.75rem;
+}
+
+/* ── Fieldset descriptions — contextual help ────────────────────────────────── */
+fieldset .description {
+  color: #6b7280;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(99, 102, 241, 0.03);
+  border-left: 3px solid rgba(99, 102, 241, 0.25);
+  border-radius: 0 var(--automex-card-radius) var(--automex-card-radius) 0;
+}
+
+/* ── Form field help text ──────────────────────────────────────────────────── */
+.form-row .help {
+  color: #6b7280;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+}
+.form-row .help::before {
+  content: "ℹ";
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  margin-top: 0.0625rem;
+}
+
+/* ── Readonly fields ───────────────────────────────────────────────────────── */
+.readonly {
+  background-color: rgba(249, 250, 251, 0.8);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.8125rem;
+}
+
+/* ── Submit row — sticky at bottom on long forms ───────────────────────────── */
+.submit-row {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.85);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 1rem;
+  margin: 2rem -1rem -1rem;
+  border-radius: 0 0 var(--automex-card-radius) var(--automex-card-radius);
+}
+
+/* ── Filter bar refinements ────────────────────────────────────────────────── */
+#changelist-filter {
+  border-radius: var(--automex-card-radius);
+  box-shadow: var(--automex-shadow-sm);
+}
+#changelist-filter h3 {
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ── Focus ring consistency ────────────────────────────────────────────────── */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+button:focus-visible {
+  outline: none;
+  box-shadow: var(--automex-ring);
+  border-color: rgb(99, 102, 241);
+}
+
+/* ── Sidebar refinements ────────────────────────────────────────────────────── */
+#nav-sidebar .app-name {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+#nav-sidebar .model-name {
+  font-size: 0.8125rem;
+  transition: color var(--automex-transition-fast);
+}
+
+/* ── Breadcrumb refinements ────────────────────────────────────────────────── */
+.breadcrumbs {
+  font-size: 0.8125rem;
+}
+.breadcrumbs a {
+  transition: opacity var(--automex-transition-fast);
+}
+.breadcrumbs a:hover {
+  opacity: 0.8;
+}
+
+/* ── Object-tools (Add button etc.) ────────────────────────────────────────── */
+.object-tools .addlink {
+  border-radius: 8px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: all var(--automex-transition-fast);
+}
+.object-tools .addlink:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--automex-shadow-md);
+}
+
+/* ── Messages / notifications ──────────────────────────────────────────────── */
+.messagelist li {
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+/* ── Dark mode refinements ─────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .dashboard .flex-wrap > .card:hover {
+    border-color: rgba(129, 140, 248, 0.2);
+  }
+  fieldset .description {
+    background: rgba(129, 140, 248, 0.06);
+    border-left-color: rgba(129, 140, 248, 0.3);
+  }
+  .readonly {
+    background-color: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  .submit-row {
+    background: rgba(17, 24, 39, 0.9);
+    border-top-color: rgba(255, 255, 255, 0.06);
+  }
+  #result_list tbody tr:hover {
+    background-color: rgba(129, 140, 248, 0.06);
+  }
+  .inline-group .tabular tr.dynamic-form:hover {
+    background-color: rgba(129, 140, 248, 0.04);
+  }
+}
+
+/* ── Environment badge (dev/staging indicator) ─────────────────────────────── */
+.env-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.env-badge--development {
+  background: rgba(234, 179, 8, 0.12);
+  color: rgb(161, 98, 7);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+.env-badge--staging {
+  background: rgba(245, 158, 11, 0.12);
+  color: rgb(194, 65, 12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.env-badge--production {
+  background: rgba(34, 197, 94, 0.12);
+  color: rgb(21, 128, 61);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+/* ── Section cards (change-form grouping) ──────────────────────────────────── */
+.module {
+  border-radius: var(--automex-card-radius);
+  box-shadow: var(--automex-shadow-sm);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  margin-bottom: 1.25rem;
+}
+.module h2 {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: 0.025em;
+  padding: 0.875rem 1.25rem;
+}
+
+/* ── Pagination refinements ────────────────────────────────────────────────── */
+.paginator {
+  font-size: 0.8125rem;
+}
+.paginator a {
+  border-radius: 6px;
+  transition: all var(--automex-transition-fast);
+}
+.paginator a:hover {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+/* ── Autocomplete select hover ─────────────────────────────────────────────── */
+.select2-container--unfold .select2-results__option--highlighted {
+  border-radius: 6px;
+}
+
+/* ── Action row per-item mini button refinements ───────────────────────────── */
+.actions_row .button {
+  border-radius: 6px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transition: all var(--automex-transition-fast);
+}
+.actions_row .button:hover {
+  transform: translateY(-1px);
+}

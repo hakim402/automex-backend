@@ -17,10 +17,24 @@
 {% block content %}
 {% component "unfold/components/container.html" %}
 
-    {# ── KPI cards row ─────────────────────────────────────────────── #}
-    {% component "unfold/components/flex.html" with class="gap-4 mb-8 flex-col lg:flex-row" %}
+    {# ── Welcome bar with environment badge ───────────────────────── #}
+    {% component "unfold/components/flex.html" with class="gap-4 mb-8 items-center justify-between" %}
+        <div>
+            {% component "unfold/components/title.html" %}
+                {% trans "Welcome back" %}{% if user.full_name %}, {{ user.full_name }}{% endif %}
+            {% endcomponent %}
+            {% component "unfold/components/text.html" with class="text-font-subtle-light dark:text-font-subtle-dark mt-1" %}
+                {% now "l, F j, Y" %} · {{ user.email }}
+            {% endcomponent %}
+        </div>
+        <span class="env-badge {{ env_css_class }}">{{ env_label }}</span>
+    {% endcomponent %}
+
+    {# ── KPI cards — responsive grid (1→2→3→4 columns) ────────────── #}
+    {% component "unfold/components/flex.html" with class="gap-4 mb-8 flex-row flex-wrap" %}
         {% for card in kpi_cards %}
-            {% component "unfold/components/card.html" with class="lg:w-1/5" %}
+            {% with card_class="w-full sm:w-1/2 lg:w-1/3 xl:w-1/4"|add:" "|add:card.css_class|default:"" %}
+            {% component "unfold/components/card.html" with class=card_class %}
                 {% component "unfold/components/text.html" %}
                     {{ card.title }}
                 {% endcomponent %}
@@ -31,10 +45,54 @@
                     {{ card.footer }}
                 {% endcomponent %}
             {% endcomponent %}
+            {% endwith %}
         {% endfor %}
     {% endcomponent %}
 
-    {# ── Charts row ────────────────────────────────────────────────── #}
+    {# ── System Health Summary ─────────────────────────────────────── #}
+    {% component "unfold/components/flex.html" with class="gap-4 mb-8 flex-col lg:flex-row" %}
+        {% component "unfold/components/card.html" with class="lg:w-full" %}
+            {% component "unfold/components/title.html" %}
+                {% trans "System Health" %}
+            {% endcomponent %}
+            <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="text-center p-3 rounded-lg bg-base-50 dark:bg-base-900">
+                    <div class="text-2xl font-bold {% if locked_users > 0 %}text-red-500{% else %}text-green-500{% endif %}">
+                        {{ locked_users }}
+                    </div>
+                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">
+                        {% trans "Locked Accounts" %}
+                    </div>
+                </div>
+                <div class="text-center p-3 rounded-lg bg-base-50 dark:bg-base-900">
+                    <div class="text-2xl font-bold {% if failed_notifications > 0 %}text-red-500{% else %}text-green-500{% endif %}">
+                        {{ failed_notifications }}
+                    </div>
+                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">
+                        {% trans "Failed Notifications" %}
+                    </div>
+                </div>
+                <div class="text-center p-3 rounded-lg bg-base-50 dark:bg-base-900">
+                    <div class="text-2xl font-bold {% if unresolved_tickets > 0 %}text-amber-500{% else %}text-green-500{% endif %}">
+                        {{ unresolved_tickets }}
+                    </div>
+                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">
+                        {% trans "Unresolved Tickets" %}
+                    </div>
+                </div>
+                <div class="text-center p-3 rounded-lg bg-base-50 dark:bg-base-900">
+                    <div class="text-2xl font-bold text-indigo-500">
+                        {{ draft_content }}
+                    </div>
+                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">
+                        {% trans "Draft Content" %}
+                    </div>
+                </div>
+            </div>
+        {% endcomponent %}
+    {% endcomponent %}
+
+    {# ── Charts row 1 ─────────────────────────────────────────────── #}
     {% component "unfold/components/flex.html" with class="gap-4 mb-8 flex-col lg:flex-row" %}
 
         {% component "unfold/components/card.html" with class="lg:w-2/3" %}
@@ -52,6 +110,29 @@
             {% endcomponent %}
             <div class="mt-4">
                 <canvas id="roleChart" height="90"></canvas>
+            </div>
+        {% endcomponent %}
+
+    {% endcomponent %}
+
+    {# ── Charts row 2 ─────────────────────────────────────────────── #}
+    {% component "unfold/components/flex.html" with class="gap-4 mb-8 flex-col lg:flex-row" %}
+
+        {% component "unfold/components/card.html" with class="lg:w-1/2" %}
+            {% component "unfold/components/title.html" %}
+                {% trans "Leads by status" %}
+            {% endcomponent %}
+            <div class="mt-4">
+                <canvas id="leadStatusChart" height="90"></canvas>
+            </div>
+        {% endcomponent %}
+
+        {% component "unfold/components/card.html" with class="lg:w-1/2" %}
+            {% component "unfold/components/title.html" %}
+                {% trans "Leads by source channel" %}
+            {% endcomponent %}
+            <div class="mt-4">
+                <canvas id="channelChart" height="90"></canvas>
             </div>
         {% endcomponent %}
 
@@ -120,6 +201,56 @@
                         "rgb(234, 179, 8)",
                         "rgb(34, 197, 94)",
                         "rgb(239, 68, 68)",
+                    ],
+                }],
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: "bottom" } },
+            },
+        });
+
+        const leadStatusCtx = document.getElementById("leadStatusChart");
+        new Chart(leadStatusCtx, {
+            type: "bar",
+            data: {
+                labels: {{ lead_status_labels|safe }},
+                datasets: [{
+                    label: "{% trans 'Leads' %}",
+                    data: {{ lead_status_data|safe }},
+                    backgroundColor: [
+                        "rgb(99, 102, 241)",
+                        "rgb(234, 179, 8)",
+                        "rgb(34, 197, 94)",
+                        "rgb(239, 68, 68)",
+                        "rgb(168, 85, 247)",
+                        "rgb(59, 130, 246)",
+                        "rgb(251, 146, 60)",
+                        "rgb(156, 163, 175)",
+                    ],
+                }],
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+            },
+        });
+
+        const channelCtx = document.getElementById("channelChart");
+        new Chart(channelCtx, {
+            type: "doughnut",
+            data: {
+                labels: {{ channel_labels|safe }},
+                datasets: [{
+                    data: {{ channel_data|safe }},
+                    backgroundColor: [
+                        "rgb(99, 102, 241)",
+                        "rgb(34, 197, 94)",
+                        "rgb(234, 179, 8)",
+                        "rgb(239, 68, 68)",
+                        "rgb(168, 85, 247)",
+                        "rgb(59, 130, 246)",
                     ],
                 }],
             },

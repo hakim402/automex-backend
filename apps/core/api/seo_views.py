@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from itertools import chain
 
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -22,6 +24,7 @@ from apps.core.permissions import HasValidAPIKey
 from drf_spectacular.utils import extend_schema, inline_serializer
 
 
+@method_decorator(cache_page(60 * 15), name="dispatch")
 class SEOSettingsView(APIView):
     authentication_classes = []
     permission_classes = [HasValidAPIKey]
@@ -74,6 +77,7 @@ class SEOSettingsView(APIView):
         })
 
 
+@method_decorator(cache_page(60 * 60), name="dispatch")
 class SitemapURLsView(APIView):
     """Flat list of every published URL — same underlying data as /sitemap.xml, as JSON."""
 

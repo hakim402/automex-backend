@@ -13,6 +13,7 @@ from apps.core.models import OrderableModel, TimeStampedModel, UUIDModel
 
 from .case_studies import CaseStudy
 from .services import Service
+from .taxonomy import Industry
 
 
 class Testimonial(UUIDModel, TimeStampedModel, OrderableModel):
@@ -51,6 +52,26 @@ class Testimonial(UUIDModel, TimeStampedModel, OrderableModel):
 
     is_featured  = models.BooleanField(_("featured"), default=False, db_index=True)
     is_published = models.BooleanField(_("published"), default=True, db_index=True)
+
+    # ── Enterprise fields ──────────────────────────────────────────
+    video_url = models.URLField(_("video URL"), blank=True)
+    video_thumbnail = models.ForeignKey(
+        "core.MediaAsset",
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="+", verbose_name=_("video thumbnail"),
+    )
+    project_impact = models.JSONField(
+        _("project impact"), default=dict, blank=True,
+        help_text=_("Key impact metrics, e.g. {\"revenue_increase\": \"40%\", \"cost_savings\": \"$2M\"}"),
+    )
+    client_industry = models.ForeignKey(
+        Industry,
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="testimonials", verbose_name=_("client industry"),
+    )
+    is_video_testimonial = models.BooleanField(
+        _("video testimonial"), default=False, db_index=True,
+    )
 
     class Meta:
         ordering            = ["order", "-created_at"]

@@ -34,10 +34,6 @@ services:
     env_file:
       - .env
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2
-    volumes:
-      # Bind mounts so Nginx can serve these directly.
-      - ./staticfiles:/app/staticfiles
-      - ./media:/app/media
     ports:
       - "8001:8000"
     environment:
@@ -57,9 +53,6 @@ services:
     env_file:
       - .env
     command: celery -A config worker -l info
-    volumes:
-      - ./staticfiles:/app/staticfiles
-      - ./media:/app/media
     environment:
       DB_HOST: db
       DB_PORT: 5432
@@ -77,9 +70,6 @@ services:
     env_file:
       - .env
     command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
-    volumes:
-      - ./staticfiles:/app/staticfiles
-      - ./media:/app/media
     environment:
       DB_HOST: db
       DB_PORT: 5432

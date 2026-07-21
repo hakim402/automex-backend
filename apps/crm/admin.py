@@ -26,6 +26,8 @@ from .models import (
     LeadActivity,
     NewsletterSubscriber,
     QuoteRequestDetail,
+    SupportTicket,
+    SupportTicketMessage,
 )
 
 
@@ -51,6 +53,9 @@ class QuoteRequestDetailInline(StackedInline):
         "requested_services",
         "project_description",
         ("estimated_budget_min", "estimated_budget_max", "currency"),
+        ("quoted_price_min", "quoted_price_max", "quoted_currency"),
+        "version",
+        "admin_notes",
     ]
 
 
@@ -58,7 +63,7 @@ class LeadActivityInline(TabularInline):
     model = LeadActivity
     extra = 1
     tab = True
-    fields = ["activity_type", "description", "performed_by", "created_at"]
+    fields = ["activity_type", "description", "message", "is_customer_visible", "performed_by", "created_at"]
     readonly_fields = ["created_at"]
     autocomplete_fields = ["performed_by"]
     ordering = ["-created_at"]
@@ -75,26 +80,32 @@ class LeadAdmin(ModelAdmin):
         "display_header",
         "display_lead_type",
         "display_status",
+        "display_priority",
         "company",
         "score",
         "assigned_to",
+        "user",
         "is_spam",
         "created_at",
     ]
     list_filter = [
         ("lead_type", ChoicesDropdownFilter),
         ("status", ChoicesDropdownFilter),
+        ("priority", ChoicesDropdownFilter),
+        ("source_channel", ChoicesDropdownFilter),
         ("assigned_to", RelatedDropdownFilter),
         "is_spam",
         ("created_at", RangeDateFilter),
     ]
     search_fields = ["full_name", "email", "company", "phone"]
-    autocomplete_fields = ["service_interest", "industry", "assigned_to"]
-    readonly_fields = ["id", "created_at", "updated_at", "converted_at"]
+    autocomplete_fields = ["service_interest", "industry", "assigned_to", "user"]
+    readonly_fields = ["id", "guest_token", "created_at", "updated_at", "converted_at"]
     inlines = [QuoteRequestDetailInline, LeadActivityInline]
     date_hierarchy = "created_at"
     list_filter_submit = True
     compressed_fields = True
+    warn_unsaved_form = True
+    save_on_top = True
     actions = [
         "action_assign_to_me",
         "action_mark_contacted",
@@ -111,6 +122,10 @@ class LeadAdmin(ModelAdmin):
             {
                 "fields": ("id", "full_name", "email", "phone", "company", "job_title", "message"),
                 "classes": ["tab"],
+                "description": _(
+                    "Basic contact information collected from the lead capture form. "
+                    "The message field contains the original inquiry text typed by the prospect."
+                ),
             },
         ),
         (
@@ -119,6 +134,7 @@ class LeadAdmin(ModelAdmin):
                 "fields": (
                     "lead_type",
                     "status",
+                    "priority",
                     "service_interest",
                     "industry",
                     "budget_range",
@@ -128,8 +144,27 @@ class LeadAdmin(ModelAdmin):
                     "assigned_to",
                     "lost_reason",
                     "converted_at",
+                    "expected_close_date",
                 ),
                 "classes": ["tab"],
+                "description": _(
+                    "Categorize and prioritize the lead. Score is auto-calculated based on "
+                    "engagement signals (higher = hotter). Priority helps the sales team triage. "
+                    "Mark as spam to hide from active pipelines. Lost reason should be filled in "
+                    "when status is 'lost'."
+                ),
+            },
+        ),
+        (
+            _("User & Tracking"),
+            {
+                "fields": ("user", "guest_token", "tags", "source_channel"),
+                "classes": ["tab"],
+                "description": _(
+                    "If the lead is linked to a registered user account, the User field is set. "
+                    "Guest token identifies anonymous visitors across sessions. "
+                    "Source channel records how the lead first arrived (website, LinkedIn, referral, etc.)."
+                ),
             },
         ),
         (
@@ -146,9 +181,18 @@ class LeadAdmin(ModelAdmin):
                     "language",
                 ),
                 "classes": ["tab", "collapse"],
+                "description": _(
+                    "Marketing attribution data captured automatically from the lead's browser. "
+                    "UTM parameters track campaign performance in analytics. "
+                    "Source page is the exact URL the lead was on when they submitted the form. "
+                    "IP and user-agent are used for geo-location and device analytics."
+                ),
             },
         ),
-        (_("Audit"), {"fields": ("created_at", "updated_at"), "classes": ["tab"]}),
+        (
+            _("Audit"),
+            {"fields": ("created_at", "updated_at"), "classes": ["tab"], "description": _("Auto-managed timestamps.")},
+        ),
     )
 
     @display(description=_("Lead"), header=True)
@@ -184,6 +228,13 @@ class LeadAdmin(ModelAdmin):
     )
     def display_status(self, obj):
         return obj.status
+
+    @display(
+        description=_("Priority"),
+        label={"low": "info", "normal": "info", "high": "warning", "urgent": "danger"},
+    )
+    def display_priority(self, obj):
+        return obj.priority
 
     @admin.action(description=_("Assign to me"))
     def action_assign_to_me(self, request, queryset):
@@ -228,6 +279,8 @@ class NewsletterSubscriberAdmin(ActiveToggleAdminMixin, ModelAdmin):
     readonly_fields = ["id", "subscribed_at"]
     actions = ["action_activate", "action_deactivate"]
     ordering = ["-subscribed_at"]
+    list_filter_submit = True
+    warn_unsaved_form = True
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -243,6 +296,31 @@ class AvailabilitySlotAdmin(ActiveToggleAdminMixin, ModelAdmin):
     readonly_fields = ["id"]
     actions = ["action_activate", "action_deactivate"]
     ordering = ["weekday", "start_time"]
+    list_filter_submit = True
+    warn_unsaved_form = True
+
+    fieldsets = (
+        (
+            _("Slot"),
+            {
+                "fields": ("id", "weekday", "start_time", "end_time", "timezone", "max_bookings"),
+                "classes": ["tab"],
+                "description": _(
+                    "Define a recurring weekly availability window. "
+                    "Max bookings limits how many consultations can be booked into this slot per day. "
+                    "Timezone is used to display the slot time correctly to the lead."
+                ),
+            },
+        ),
+        (
+            _("Status"),
+            {
+                "fields": ("is_active",),
+                "classes": ["tab"],
+                "description": _("Inactive slots are hidden from the booking calendar."),
+            },
+        ),
+    )
 
     @admin.display(description=_("Weekday"))
     def get_weekday_display(self, obj):
@@ -258,6 +336,7 @@ class AvailabilitySlotAdmin(ActiveToggleAdminMixin, ModelAdmin):
 class ConsultationBookingAdmin(ModelAdmin):
     list_display = [
         "lead",
+        "user",
         "scheduled_date",
         "scheduled_time",
         "meeting_type",
@@ -270,10 +349,13 @@ class ConsultationBookingAdmin(ModelAdmin):
         ("scheduled_date", RangeDateFilter),
     ]
     search_fields = ["lead__full_name", "lead__email"]
-    autocomplete_fields = ["lead", "slot"]
+    autocomplete_fields = ["lead", "slot", "user"]
     readonly_fields = ["id", "created_at", "updated_at", "confirmed_at", "cancelled_at", "completed_at"]
     date_hierarchy = "scheduled_date"
     list_filter_submit = True
+    compressed_fields = True
+    warn_unsaved_form = True
+    save_on_top = True
     actions = ["action_confirm", "action_cancel", "action_complete", "action_mark_no_show"]
 
     fieldsets = (
@@ -283,26 +365,47 @@ class ConsultationBookingAdmin(ModelAdmin):
                 "fields": (
                     "id",
                     "lead",
+                    "user",
                     "slot",
                     "scheduled_date",
                     "scheduled_time",
                     "timezone",
                     "meeting_type",
+                    "meeting_link",
                     "status",
                 ),
                 "classes": ["tab"],
+                "description": _(
+                    "Core booking details. The slot links to a pre-configured availability window. "
+                    "Meeting link is auto-generated for online meetings or manually entered for in-person. "
+                    "Status tracks the lifecycle: pending → confirmed → completed / cancelled."
+                ),
             },
         ),
         (
-            _("Calendar Integration"),
-            {"fields": ("calendar_provider", "calendar_event_id", "calendar_event_link"), "classes": ["tab"]},
+            _("Reschedule"),
+            {"fields": ("reschedule_count", "rescheduled_from"), "classes": ["tab", "collapse"],
+             "description": _("Tracks how many times this booking was rescheduled and the previous booking it came from.")},
         ),
-        (_("Notes"), {"fields": ("notes", "cancellation_reason"), "classes": ["tab"]}),
+        (
+            _("Calendar Integration"),
+            {"fields": ("calendar_provider", "calendar_event_id", "calendar_event_link"), "classes": ["tab"],
+             "description": _(
+                 "When connected to Google Calendar / Outlook, the provider, event ID and link "
+                 "are populated automatically after the event is synced."
+             )},
+        ),
+        (
+            _("Notes"),
+            {"fields": ("notes", "cancellation_reason"), "classes": ["tab"],
+            "description": _("Internal notes are visible to admins only. Cancellation reason is shown when status is 'cancelled'.")},
+        ),
         (
             _("Lifecycle"),
             {
-                "fields": ("confirmed_at", "cancelled_at", "completed_at", "created_at", "updated_at"),
+                "fields": ("reminder_sent_at", "confirmed_at", "cancelled_at", "completed_at", "created_at", "updated_at"),
                 "classes": ["tab"],
+                "description": _("Auto-populated timestamps for each booking state transition."),
             },
         ),
     )
@@ -359,6 +462,7 @@ class CostCalculatorRuleAdmin(ActiveToggleAdminMixin, ModelAdmin):
     readonly_fields = ["id", "created_at", "updated_at"]
     actions = ["action_activate", "action_deactivate"]
     list_filter_submit = True
+    warn_unsaved_form = True
 
 
 @admin.register(CalculatorSubmission)
@@ -391,3 +495,210 @@ class CalculatorSubmissionAdmin(ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SUPPORT TICKETS
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class SupportTicketMessageInline(TabularInline):
+    model = SupportTicketMessage
+    extra = 0
+    tab = True
+    fields = ["author_name", "author_is_staff", "body", "is_read", "created_at"]
+    readonly_fields = ["created_at"]
+    autocomplete_fields = ["author_user"]
+    ordering = ["-created_at"]
+
+
+@admin.register(SupportTicket)
+class SupportTicketAdmin(ModelAdmin):
+    list_display = [
+        "title",
+        "display_ticket_type",
+        "display_status",
+        "display_priority",
+        "assigned_to",
+        "user",
+        "guest_email",
+        "created_at",
+    ]
+    list_filter = [
+        ("ticket_type", ChoicesDropdownFilter),
+        ("status", ChoicesDropdownFilter),
+        ("priority", ChoicesDropdownFilter),
+        ("assigned_to", RelatedDropdownFilter),
+        ("created_at", RangeDateFilter),
+    ]
+    search_fields = ["title", "description", "guest_email", "user__email"]
+    autocomplete_fields = ["user", "assigned_to", "related_lead", "related_service"]
+    readonly_fields = ["id", "slug", "guest_token", "resolved_at", "closed_at", "created_at", "updated_at"]
+    inlines = [SupportTicketMessageInline]
+    date_hierarchy = "created_at"
+    list_filter_submit = True
+    compressed_fields = True
+    warn_unsaved_form = True
+    save_on_top = True
+    actions = ["action_mark_in_progress", "action_mark_resolved", "action_mark_closed"]
+
+    fieldsets = (
+        (
+            _("Ticket"),
+            {
+                "fields": (
+                    "id",
+                    "title",
+                    "slug",
+                    "description",
+                    "ticket_type",
+                    "status",
+                    "priority",
+                ),
+                "classes": ["tab"],
+                "description": _(
+                    "Core ticket information. Slug is auto-generated from the title. "
+                    "Status reflects the current lifecycle stage. Priority helps the support team triage."
+                ),
+            },
+        ),
+        (
+            _("Ownership"),
+            {"fields": ("user", "guest_email", "guest_token", "assigned_to"), "classes": ["tab"],
+             "description": _("Who submitted the ticket (registered user or guest) and who is handling it.")},
+        ),
+        (
+            _("Relations"),
+            {"fields": ("related_lead", "related_service"), "classes": ["tab", "collapse"],
+             "description": _("Link this ticket to a related lead or service to provide support context.")},
+        ),
+        (
+            _("Resolution"),
+            {"fields": ("resolution_summary", "resolved_at", "closed_at"), "classes": ["tab"],
+             "description": _(
+                 "Resolution summary should describe how the issue was solved. "
+                 "Resolved-at and closed-at are auto-populated when marking status transitions."
+             )},
+        ),
+        (
+            _("Audit"),
+            {"fields": ("created_at", "updated_at"), "classes": ["tab"],
+            "description": _("Auto-managed timestamps.")},
+        ),
+    )
+
+    @display(description=_("Type"))
+    def display_ticket_type(self, obj):
+        return obj.ticket_type
+
+    @display(
+        description=_("Status"),
+        label={
+            "open": "info",
+            "in_progress": "warning",
+            "waiting_customer": "warning",
+            "waiting_admin": "warning",
+            "resolved": "success",
+            "closed": "danger",
+        },
+    )
+    def display_status(self, obj):
+        return obj.status
+
+    @display(
+        description=_("Priority"),
+        label={"low": "info", "normal": "info", "high": "warning", "urgent": "danger"},
+    )
+    def display_priority(self, obj):
+        return obj.priority
+
+    @admin.action(description=_("Mark as in progress"))
+    def action_mark_in_progress(self, request, queryset):
+        queryset.update(status=SupportTicket.Status.IN_PROGRESS)
+
+    @admin.action(description=_("Mark as resolved"))
+    def action_mark_resolved(self, request, queryset):
+        queryset.update(status=SupportTicket.Status.RESOLVED, resolved_at=timezone.now())
+
+    @admin.action(description=_("Mark as closed"))
+    def action_mark_closed(self, request, queryset):
+        queryset.update(status=SupportTicket.Status.CLOSED, closed_at=timezone.now())
+
+
+@admin.register(SupportTicketMessage)
+class SupportTicketMessageAdmin(ModelAdmin):
+    list_display = ["ticket", "author_name", "author_is_staff", "is_read", "created_at"]
+    list_filter = ["author_is_staff", "is_read"]
+    search_fields = ["ticket__title", "author_name", "body"]
+    autocomplete_fields = ["ticket", "author_user"]
+    readonly_fields = ["id", "created_at", "updated_at"]
+    list_filter_submit = True
+    warn_unsaved_form = True
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# LEAD ACTIVITY (standalone — global timeline; also inlined in LeadAdmin)
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+@admin.register(LeadActivity)
+class LeadActivityAdmin(ModelAdmin):
+    list_display = ["lead", "display_activity_type", "description", "performed_by", "is_customer_visible", "created_at"]
+    list_filter = [
+        ("activity_type", ChoicesDropdownFilter),
+        "is_customer_visible",
+        ("created_at", RangeDateFilter),
+    ]
+    search_fields = ["description", "message", "lead__full_name", "lead__email"]
+    autocomplete_fields = ["lead", "performed_by", "attachment"]
+    readonly_fields = ["id", "created_at", "updated_at"]
+    date_hierarchy = "created_at"
+    list_filter_submit = True
+
+    fieldsets = (
+        (
+            _("Activity"),
+            {
+                "fields": ("id", "lead", "activity_type", "description"),
+                "classes": ["tab"],
+                "description": _(
+                    "Activity type classifies what happened (call, email, meeting, note, etc.). "
+                    "Description is a short internal summary shown in the lead timeline."
+                ),
+            },
+        ),
+        (
+            _("Message"),
+            {
+                "fields": ("message", "is_customer_visible", "attachment"),
+                "classes": ["tab"],
+                "description": _(
+                    "Customer-visible activities appear in the client dashboard. "
+                    "Use this for status updates and messages the client should see."
+                ),
+            },
+        ),
+        (
+            _("Audit"),
+            {
+                "fields": ("performed_by", "created_at", "updated_at"),
+                "classes": ["tab"],
+                "description": _("Who performed this activity and when."),
+            },
+        ),
+    )
+
+    @display(
+        description=_("Type"),
+        label={
+            "status_change": "warning",
+            "note": "info",
+            "email_sent": "success",
+            "call": "info",
+            "meeting": "success",
+            "assigned": "warning",
+            "other": "info",
+        },
+    )
+    def display_activity_type(self, obj):
+        return obj.activity_type

@@ -1,26 +1,30 @@
 """
 apps/notifications/tasks.py
 ────────────────────────────────
-Delivers a single Notification. Only EMAIL is wired to a real provider
-(Gmail SMTP via Django's send_mail, already configured in settings) —
-SMS/WhatsApp/Slack record the attempt and fail clearly rather than
-pretending to succeed, so nothing silently vanishes once those providers
-are added later.
+Delivers a single Notification. EMAIL channel uses dynamic SMTP dispatch
+via ThirdPartyIntegration when available, falling back to Django's
+default settings. SMS/WhatsApp/Slack record the attempt and fail clearly
+rather than pretending to succeed.
+
+Also includes Celery beat tasks for booking reminders and digest emails.
 """
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 
 from celery import shared_task
-from django.conf import settings
 from django.core.mail import send_mail
+from django.conf import settings
 from django.utils import timezone
 
 from .models import (
     Notification,
     NotificationChannel,
     NotificationDeliveryAttempt,
+    NotificationProviderConfig,
     NotificationStatus,
+    ThirdPartyIntegration,
 )
 
 logger = logging.getLogger("apps.notifications")
@@ -98,16 +102,70 @@ def _provider_name(channel: str) -> str:
     }.get(channel, "unknown")
 
 
+def _get_smtp_connection(notification: Notification):
+    """
+    Build an SMTP connection for the notification. Looks up the linked
+    ThirdPartyIntegration via NotificationProviderConfig, or falls back
+    to Django's default settings.
+    """
+    from django.core.mail import get_connection
+
+    # Try to find a linked integration via provider config
+    provider_config = NotificationProviderConfig.objects.filter(
+        channel=NotificationChannel.EMAIL,
+        is_active=True,
+    ).select_related("integration").first()
+
+    integration = None
+    if provider_config and provider_config.integration_id:
+        integration = provider_config.integration
+    else:
+        # Fall back to default SMTP integration
+        integration = ThirdPartyIntegration.objects.filter(
+            provider_type=ThirdPartyIntegration.ProviderType.SMTP,
+            is_active=True,
+            is_default_for_type=True,
+        ).first()
+
+    if integration is None:
+        # Use Django's default SMTP settings
+        return get_connection()
+
+    creds = integration.credentials or {}
+    return get_connection(
+        host=creds.get("host", settings.EMAIL_HOST),
+        port=int(creds.get("port", settings.EMAIL_PORT)),
+        use_tls=creds.get("use_tls", settings.EMAIL_USE_TLS),
+        username=creds.get("username", settings.EMAIL_HOST_USER),
+        password=creds.get("password", settings.EMAIL_HOST_PASSWORD),
+    )
+
+
 def _dispatch(notification: Notification) -> None:
     """Raises on failure; callers handle the exception uniformly."""
     if notification.channel == NotificationChannel.EMAIL:
         if not notification.recipient_email:
             raise ValueError("Notification has no recipient_email")
+
+        connection = _get_smtp_connection(notification)
+        from_email = settings.DEFAULT_FROM_EMAIL
+
+        # Try to get from_email from integration credentials
+        provider_config = NotificationProviderConfig.objects.filter(
+            channel=NotificationChannel.EMAIL,
+            is_active=True,
+        ).select_related("integration").first()
+
+        if provider_config and provider_config.integration_id:
+            creds = provider_config.integration.credentials or {}
+            from_email = creds.get("from_email", from_email)
+
         send_mail(
             subject=notification.subject or "(no subject)",
             message=notification.body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             recipient_list=[notification.recipient_email],
+            connection=connection,
             fail_silently=False,
         )
         return
@@ -119,3 +177,59 @@ def _dispatch(notification: Notification) -> None:
 
     # SMS / WhatsApp / Slack: no provider wired yet.
     raise NotImplementedError(f"No provider configured for channel '{notification.channel}' yet")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Celery Beat tasks
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+@shared_task(name="apps.notifications.tasks.send_booking_reminder_task")
+def send_booking_reminder_task() -> int:
+    """
+    Hourly Celery beat task: finds bookings in the next 24 hours that
+    haven't had a reminder sent yet, and sends reminder emails.
+    Returns the number of reminders sent.
+    """
+    from apps.crm.models import ConsultationBooking
+    from .services import notify_user_of_booking_reminder
+
+    now = timezone.now()
+    reminder_window_start = now
+    reminder_window_end = now + timedelta(hours=24)
+
+    bookings = ConsultationBooking.objects.filter(
+        status__in=[
+            ConsultationBooking.Status.PENDING,
+            ConsultationBooking.Status.CONFIRMED,
+        ],
+        scheduled_date__gte=reminder_window_start.date(),
+        scheduled_date__lte=reminder_window_end.date(),
+        reminder_sent_at__isnull=True,
+    ).select_related("lead", "user")
+
+    count = 0
+    for booking in bookings:
+        notification = notify_user_of_booking_reminder(booking)
+        if notification:
+            booking.reminder_sent_at = timezone.now()
+            booking.save(update_fields=["reminder_sent_at", "updated_at"])
+            count += 1
+
+    logger.info("send_booking_reminder_task: sent %d reminders", count)
+    return count
+
+
+@shared_task(name="apps.notifications.tasks.send_digest_task")
+def send_digest_task(frequency: str = "daily") -> int:
+    """
+    Celery beat task: sends digest notifications to users who have
+    opted in. Run daily for 'daily' digest, weekly for 'weekly'.
+    Returns the number of digest emails sent.
+    """
+    from .services import send_digest_notifications
+
+    notifications = send_digest_notifications(frequency=frequency)
+    count = len(notifications)
+    logger.info("send_digest_task(%s): sent %d digest emails", frequency, count)
+    return count

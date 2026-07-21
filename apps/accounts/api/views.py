@@ -535,10 +535,10 @@ class ActiveSessionsView(APIView):
             user=request.user,
             revoked=False,
             expires_at__gt=tz.now(),
-        ).order_by("-last_used_at")
+        ).order_by("-last_used_at")[:50]
 
         serializer = UserRefreshTokenSerializer(sessions, many=True)
-        return Response({"sessions": serializer.data})
+        return Response({"sessions": serializer.data, "count": len(serializer.data)})
 
 
 # ──────────────────────────────────────────────────────────────────────────────

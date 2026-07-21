@@ -16,6 +16,7 @@ import logging
 import uuid
 
 from django.conf import settings
+from django.db import transaction
 
 from apps.content.models import Service
 from apps.crm.services import capture_ai_assistant_lead
@@ -33,7 +34,7 @@ FALLBACK_REPLY = (
 )
 
 
-def _get_or_create_conversation(*, request, session_id: str | None, language: str, page_url: str) -> AIConversation:
+def _get_or_create_conversation(*, request, session_id: str | None, language: str, page_url: str, user=None) -> AIConversation:
     if session_id:
         conversation = AIConversation.objects.filter(session_id=session_id, is_active=True).first()
         if conversation:
@@ -43,7 +44,8 @@ def _get_or_create_conversation(*, request, session_id: str | None, language: st
         session_id=session_id or uuid.uuid4().hex,
         language=language,
         page_url=page_url or "",
-        ip_address=request.META.get("REMOTE_ADDR") or None,
+        user=user,
+        ip_address=request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip() or request.META.get("REMOTE_ADDR") or None,
         user_agent=request.META.get("HTTP_USER_AGENT", "")[:1000],
     )
 
@@ -98,10 +100,11 @@ def handle_chat_message(
     language: str = "en",
     page_url: str = "",
     provider: AIProvider | None = None,
+    user=None,
 ) -> dict:
     provider = provider or get_default_provider()
     conversation = _get_or_create_conversation(
-        request=request, session_id=session_id, language=language, page_url=page_url,
+        request=request, session_id=session_id, language=language, page_url=page_url, user=user,
     )
 
     AIMessage.objects.create(conversation=conversation, role=AIMessage.Role.USER, content=message)
@@ -124,25 +127,26 @@ def handle_chat_message(
 
     lead_captured_this_turn = False
     if not conversation.lead_captured:
-        email = extraction.extract_email(message)
-        if email:
-            phone = extraction.extract_phone(message) or ""
-            service_interest = _resolve_service_interest(
-                lead_info.get("service_interest"), language_code=conversation.language,
-            )
-            lead = capture_ai_assistant_lead(
-                request=request,
-                email=email,
-                full_name=lead_info.get("full_name") or "",
-                phone=phone,
-                company=lead_info.get("company") or "",
-                message=message,
-                service_interest=service_interest,
-            )
-            conversation.lead = lead
-            conversation.lead_captured = True
-            conversation.save(update_fields=["lead", "lead_captured", "updated_at"])
-            lead_captured_this_turn = True
+        with transaction.atomic():
+            email = extraction.extract_email(message)
+            if email:
+                phone = extraction.extract_phone(message) or ""
+                service_interest = _resolve_service_interest(
+                    lead_info.get("service_interest"), language_code=conversation.language,
+                )
+                lead = capture_ai_assistant_lead(
+                    request=request,
+                    email=email,
+                    full_name=lead_info.get("full_name") or "",
+                    phone=phone,
+                    company=lead_info.get("company") or "",
+                    message=message,
+                    service_interest=service_interest,
+                )
+                conversation.lead = lead
+                conversation.lead_captured = True
+                conversation.save(update_fields=["lead", "lead_captured", "updated_at"])
+                lead_captured_this_turn = True
 
     return {
         "session_id": conversation.session_id,

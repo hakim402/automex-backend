@@ -55,6 +55,16 @@ class NotificationEventType(models.TextChoices):
     CONTENT_REJECTED             = "content_rejected",               _("Content Rejected")
     SYSTEM_ALERT                 = "system_alert",                   _("System Alert")
     CUSTOM                       = "custom",                         _("Custom")
+    # ── Enterprise event types ───────────────────────────────────────────
+    TICKET_CREATED               = "ticket_created",                _("Ticket Created")
+    TICKET_UPDATED               = "ticket_updated",                _("Ticket Updated")
+    TICKET_MESSAGE               = "ticket_message",                _("Ticket Message")
+    TICKET_RESOLVED              = "ticket_resolved",               _("Ticket Resolved")
+    QUOTE_RECEIVED               = "quote_received",                _("Quote Received")
+    BOOKING_CONFIRMED            = "booking_confirmed",             _("Booking Confirmed")
+    BOOKING_REMINDER             = "booking_reminder",              _("Booking Reminder")
+    REQUEST_STATUS_CHANGED       = "request_status_changed",        _("Request Status Changed")
+    REQUEST_SUBMITTED            = "request_submitted",             _("Request Submitted")
 
 
 class NotificationPriority(models.TextChoices):
@@ -129,6 +139,12 @@ class NotificationProviderConfig(UUIDModel, TimeStampedModel):
 
     is_active  = models.BooleanField(_("active"), default=True)
     is_default = models.BooleanField(_("default for channel"), default=False)
+    integration = models.ForeignKey(
+        "notifications.ThirdPartyIntegration",
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="provider_configs", verbose_name=_("linked integration"),
+        help_text=_("Link to the centralized ThirdPartyIntegration registry for credentials."),
+    )
 
     class Meta:
         ordering            = ["channel", "-is_default"]
@@ -195,6 +211,13 @@ class Notification(UUIDModel, TimeStampedModel):
     retry_count           = models.PositiveSmallIntegerField(_("retry count"), default=0)
     max_retries            = models.PositiveSmallIntegerField(_("max retries"), default=3)
 
+    # ── Enterprise fields ────────────────────────────────────────────────
+    is_read = models.BooleanField(_("read"), default=False, db_index=True)
+    batch_id = models.CharField(
+        _("batch id"), max_length=100, blank=True, db_index=True,
+        help_text=_("Groups notifications sent in the same digest batch."),
+    )
+
     class Meta:
         ordering            = ["-created_at"]
         verbose_name        = _("notification")
@@ -237,7 +260,12 @@ class NotificationDeliveryAttempt(UUIDModel):
 
 
 class NotificationPreference(UUIDModel, TimeStampedModel):
-    """Per-staff-user opt-in/opt-out per (event_type, channel). Absence of a row = default enabled."""
+    """Per-user (or per-lead) opt-in/opt-out per (event_type, channel) with digest control."""
+
+    class DigestFrequency(models.TextChoices):
+        INSTANT = "instant", _("Instant")
+        DAILY   = "daily",   _("Daily")
+        WEEKLY  = "weekly",  _("Weekly")
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
@@ -246,6 +274,18 @@ class NotificationPreference(UUIDModel, TimeStampedModel):
     event_type = models.CharField(_("event type"), max_length=40, choices=NotificationEventType.choices)
     channel    = models.CharField(_("channel"), max_length=20, choices=NotificationChannel.choices)
     is_enabled = models.BooleanField(_("enabled"), default=True)
+
+    # ── Enterprise fields ────────────────────────────────────────────────
+    digest_frequency = models.CharField(
+        _("digest frequency"), max_length=10,
+        choices=DigestFrequency.choices, default=DigestFrequency.INSTANT,
+    )
+    lead = models.ForeignKey(
+        "crm.Lead",
+        on_delete=models.CASCADE, null=True, blank=True,
+        related_name="notification_preferences", verbose_name=_("lead"),
+        help_text=_("If set, these preferences apply to this specific lead/client."),
+    )
 
     class Meta:
         ordering            = ["user", "event_type", "channel"]
@@ -259,3 +299,72 @@ class NotificationPreference(UUIDModel, TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.user} — {self.event_type}/{self.channel}: {'on' if self.is_enabled else 'off'}"
+
+
+class ThirdPartyIntegration(UUIDModel, TimeStampedModel):
+    """
+    Centralized admin-managed registry for ALL external service credentials
+    and API keys (SMTP providers, SMS gateways, AI services, cloud storage,
+    analytics, etc.). Credentials are encrypted at rest via EncryptedJSONField.
+    """
+
+    class ProviderType(models.TextChoices):
+        SMTP          = "smtp",          _("SMTP / Email")
+        SMS           = "sms",           _("SMS")
+        AI            = "ai",            _("AI / LLM")
+        CLOUD_STORAGE = "cloud_storage", _("Cloud Storage")
+        ANALYTICS     = "analytics",     _("Analytics")
+        CHAT          = "chat",          _("Chat / Messaging")
+        CRM           = "crm",           _("CRM")
+        PAYMENT       = "payment",       _("Payment")
+
+    name = models.CharField(_("name"), max_length=100)
+    slug = models.SlugField(_("slug"), max_length=120, unique=True)
+    provider_type = models.CharField(
+        _("provider type"), max_length=20, choices=ProviderType.choices, db_index=True,
+    )
+    provider_name = models.CharField(
+        _("provider name"), max_length=100,
+        help_text=_("e.g. 'google_smtp', 'hostinger_smtp', 'twilio', 'groq', 'openai'."),
+    )
+    credentials = EncryptedJSONField(
+        _("credentials"), blank=True, default=dict,
+        help_text=_(
+            "Encrypted at rest. SMTP example: "
+            '{"host": "smtp.gmail.com", "port": 587, "use_tls": true, '
+            '"username": "user@domain.com", "password": "...", "from_email": "noreply@domain.com"}. '
+            "Twilio example: {\"account_sid\": \"...\", \"auth_token\": \"...\", \"from_number\": \"...\"}."
+        ),
+    )
+    config = models.JSONField(
+        _("extra config"), default=dict, blank=True,
+        help_text=_("Non-secret configuration: timeouts, rate limits, feature flags."),
+    )
+
+    is_active = models.BooleanField(_("active"), default=True, db_index=True)
+    is_default_for_type = models.BooleanField(
+        _("default for provider type"), default=False,
+        help_text=_("If True, this is the default provider for its type (e.g. default SMTP)."),
+    )
+    description = models.TextField(_("description"), blank=True)
+
+    last_tested_at = models.DateTimeField(_("last tested at"), null=True, blank=True)
+    last_test_result = models.CharField(
+        _("last test result"), max_length=255, blank=True,
+        help_text=_("e.g. 'success', 'failed: connection timeout', 'failed: auth error'."),
+    )
+
+    class Meta:
+        ordering = ["provider_type", "name"]
+        verbose_name = _("third-party integration")
+        verbose_name_plural = _("third-party integrations")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["provider_type"],
+                condition=models.Q(is_default_for_type=True),
+                name="uq_one_default_integration_per_type",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.get_provider_type_display()})"

@@ -66,6 +66,12 @@ class PublishableAdminMixin:
                 "version",
             ),
             "classes": ["tab"],
+            "description": _(
+                "Content lifecycle: Draft → In Review → Approved → Published → Archived. "
+                "Submit for review when content is ready for editorial check. "
+                "Rejection reason is required when sending content back to draft. "
+                "Version auto-increments on each publish to track revision history."
+            ),
         },
     )
 

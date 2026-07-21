@@ -9,6 +9,7 @@ interrupting the conversation.
 """
 from __future__ import annotations
 
+from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -22,6 +23,12 @@ class AIConversation(UUIDModel, TimeStampedModel):
         FACEBOOK       = "facebook",       _("Facebook Messenger")
 
     session_id = models.CharField(_("session id"), max_length=100, unique=True, db_index=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="ai_conversations", verbose_name=_("user"),
+        help_text=_("Authenticated user, if the visitor was logged in."),
+    )
     lead = models.ForeignKey(
         "crm.Lead",
         on_delete=models.SET_NULL, null=True, blank=True,
@@ -46,7 +53,10 @@ class AIConversation(UUIDModel, TimeStampedModel):
         ordering            = ["-started_at"]
         verbose_name        = _("AI conversation")
         verbose_name_plural = _("AI conversations")
-        indexes = [models.Index(fields=["is_active", "-started_at"], name="idx_aiconv_active_started")]
+        indexes = [
+            models.Index(fields=["is_active", "-started_at"], name="idx_aiconv_active_started"),
+            models.Index(fields=["user", "-started_at"], name="idx_aiconv_user_started"),
+        ]
 
     def __str__(self) -> str:
         return f"Conversation {self.session_id}"

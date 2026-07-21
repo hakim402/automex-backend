@@ -189,15 +189,27 @@ class TenantAdmin(ModelAdmin):
     list_fullwidth = False
     compressed_fields = True
     warn_unsaved_form = True
+    save_on_top = True
+    list_per_page = 25
     actions = ["activate_tenants", "deactivate_tenants"]
 
     fieldsets = (
-        (_("Identity"), {"fields": ("id", "name", "slug"), "classes": ["tab"]}),
+        (
+            _("Identity"),
+            {"fields": ("id", "name", "slug"), "classes": ["tab"],
+             "description": _("Unique tenant identifier and URL slug used for multi-tenant routing.")},
+        ),
         (
             _("Subscription"),
-            {"fields": ("subscription_tier", "is_active", "settings"), "classes": ["tab"]},
+            {"fields": ("subscription_tier", "is_active", "settings"), "classes": ["tab"],
+             "description": _(
+                 "Subscription tier controls feature access across the tenant. "
+                 "Settings holds JSON configuration specific to this tenant (branding, limits, etc.). "
+                 "Inactive tenants prevent all member logins."
+             )},
         ),
-        (_("Audit"), {"fields": ("created_at", "updated_at"), "classes": ["tab"]}),
+        (_("Audit"), {"fields": ("created_at", "updated_at"), "classes": ["tab"],
+         "description": _("Auto-managed timestamps.")}),
     )
 
     def get_queryset(self, request):
@@ -278,6 +290,8 @@ class UserAdmin(ModelAdmin):
     list_filter_submit = True
     compressed_fields = True
     warn_unsaved_form = True
+    save_on_top = True
+    list_per_page = 25
     inlines = [UserProfileInline, UserRoleAssignmentInline, UserRefreshTokenInline]
 
     readonly_fields = [
@@ -298,17 +312,29 @@ class UserAdmin(ModelAdmin):
             {
                 "fields": ("id", "email", "full_name", "password", "role", "tenant"),
                 "classes": ["tab"],
+                "description": _(
+                    "Core user identity. Role determines access level (superadmin, admin, client). "
+                    "Tenant scopes data visibility — users only see records belonging to their tenant."
+                ),
             },
         ),
         (
             _("Google OAuth"),
-            {"fields": ("google_sub", "google_picture_url"), "classes": ["tab"]},
+            {"fields": ("google_sub", "google_picture_url"), "classes": ["tab"],
+             "description": _(
+                 "Populated automatically when a user signs in via Google OAuth. "
+                 "Google sub is the unique subject identifier from Google's ID token. Read-only."
+             )},
         ),
         (
             _("Permissions"),
             {
                 "fields": ("is_active", "is_staff", "is_superuser", "is_email_verified"),
                 "classes": ["tab"],
+                "description": _(
+                    "Standard Django permission flags. is_active controls login access — deactivate to block. "
+                    "is_staff grants access to the admin panel. is_superuser bypasses all permission checks."
+                ),
             },
         ),
         (
@@ -322,17 +348,29 @@ class UserAdmin(ModelAdmin):
                     "password_last_changed",
                 ),
                 "classes": ["tab"],
+                "description": _(
+                    "Login tracking and brute-force protection. After 5 consecutive failed attempts "
+                    "the account is locked for 15 minutes. Use the 'Unlock' action to manually reset."
+                ),
             },
         ),
         (
             _("Legal"),
-            {"fields": ("terms_accepted_at", "privacy_accepted_version"), "classes": ["tab"]},
+            {"fields": ("terms_accepted_at", "privacy_accepted_version"), "classes": ["tab"],
+             "description": _(
+                 "GDPR and privacy compliance timestamps. Terms accepted date is set on first login. "
+                 "Privacy accepted version tracks which version of the policy the user agreed to."
+             )},
         ),
         (
             _("Audit"),
             {
                 "fields": ("created_at", "created_by", "deleted_at", "deleted_by"),
                 "classes": ["tab"],
+                "description": _(
+                    "Creation and soft-deletion tracking. Deleted users are hidden but retained for data integrity. "
+                    "Created by records which staff member created this user account."
+                ),
             },
         ),
     )
@@ -452,6 +490,8 @@ class PermissionAdmin(ModelAdmin):
     search_fields = ["codename", "name", "resource_type"]
     list_filter = ["resource_type"]
     readonly_fields = ["id"]
+    list_filter_submit = True
+    warn_unsaved_form = True
 
 
 @admin.register(Role)
@@ -460,6 +500,17 @@ class RoleAdmin(ModelAdmin):
     search_fields = ["name"]
     filter_horizontal = ["permissions"]
     readonly_fields = ["id", "created_at"]
+    warn_unsaved_form = True
+
+    fieldsets = (
+        (_("Role"), {"fields": ("id", "name", "permissions"), "classes": ["tab"],
+         "description": _(
+             "A named role groups one or more permissions. Assign roles to users via UserRoleAssignment. "
+             "Permissions define what actions a user with this role can perform."
+         )}),
+        (_("Audit"), {"fields": ("created_at",), "classes": ["tab"],
+         "description": _("Auto-managed timestamp.")}),
+    )
 
     def get_queryset(self, request):
         return super().get_queryset(request).annotate(_permission_count=Count("permissions"))
@@ -476,6 +527,21 @@ class UserRoleAssignmentAdmin(ModelAdmin):
     search_fields = ["user__email", "role__name"]
     readonly_fields = ["id", "assigned_at"]
     autocomplete_fields = ["user", "role", "assigned_by"]
+    list_filter_submit = True
+    warn_unsaved_form = True
+
+    fieldsets = (
+        (_("Assignment"), {"fields": ("id", "user", "role", "assigned_by"), "classes": ["tab"],
+         "description": _(
+             "Assign a role to a user. The role's permissions are inherited by the user. "
+             "Assigned by records which staff member created this assignment."
+         )}),
+        (_("Lifecycle"), {"fields": ("assigned_at", "expires_at"), "classes": ["tab"],
+         "description": _(
+             "Assignments can be time-limited via the expires_at field. "
+             "Expired assignments are automatically considered inactive by the permission system."
+         )}),
+    )
 
     @display(description=_("Active"), label={True: "success", False: "danger"})
     def display_active(self, obj):
@@ -510,6 +576,7 @@ class UserRefreshTokenAdmin(ModelAdmin):
         "created_at",
     ]
     actions = ["revoke_selected"]
+    list_filter_submit = True
 
     def has_add_permission(self, request):
         return False
@@ -547,17 +614,17 @@ class _BaseTokenAdmin(ModelAdmin):
 
 @admin.register(MagicLinkToken)
 class MagicLinkTokenAdmin(_BaseTokenAdmin):
-    pass
+    list_filter_submit = True
 
 
 @admin.register(EmailVerificationToken)
 class EmailVerificationTokenAdmin(_BaseTokenAdmin):
-    pass
+    list_filter_submit = True
 
 
 @admin.register(PasswordResetToken)
 class PasswordResetTokenAdmin(_BaseTokenAdmin):
-    pass
+    list_filter_submit = True
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -571,6 +638,17 @@ class UserMFAAdmin(ModelAdmin):
     list_filter = ["method", "is_active"]
     search_fields = ["user__email"]
     readonly_fields = ["id", "user", "secret_encrypted", "created_at", "updated_at"]
+
+    fieldsets = (
+        (_("MFA"), {"fields": ("id", "user", "method", "is_active"), "classes": ["tab"],
+         "description": _(
+             "Multi-factor authentication configuration for this user. "
+             "TOTP uses an authenticator app (e.g. Google Authenticator). "
+             "WebAuthn uses biometric or hardware security keys."
+         )}),
+        (_("Audit"), {"fields": ("secret_encrypted", "created_at", "updated_at"), "classes": ["tab"],
+         "description": _("Secret is encrypted at rest. Never expose the raw TOTP secret.")}),
+    )
 
     @display(
         description=_("Method"),

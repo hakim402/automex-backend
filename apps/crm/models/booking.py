@@ -8,6 +8,7 @@ regardless of entry channel.
 """
 from __future__ import annotations
 
+from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -66,6 +67,11 @@ class ConsultationBooking(UUIDModel, TimeStampedModel):
     lead = models.ForeignKey(
         Lead, on_delete=models.CASCADE, related_name="consultation_bookings", verbose_name=_("lead"),
     )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="consultation_bookings", verbose_name=_("linked user"),
+    )
     slot = models.ForeignKey(
         AvailabilitySlot,
         on_delete=models.SET_NULL, null=True, blank=True,
@@ -95,6 +101,15 @@ class ConsultationBooking(UUIDModel, TimeStampedModel):
     confirmed_at = models.DateTimeField(_("confirmed at"), null=True, blank=True)
     cancelled_at = models.DateTimeField(_("cancelled at"), null=True, blank=True)
     completed_at = models.DateTimeField(_("completed at"), null=True, blank=True)
+
+    # ── Enterprise fields ────────────────────────────────────────────────
+    reschedule_count = models.PositiveIntegerField(_("reschedule count"), default=0)
+    rescheduled_from = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="reschedule_chain", verbose_name=_("rescheduled from"),
+    )
+    meeting_link = models.URLField(_("meeting link"), blank=True)
+    reminder_sent_at = models.DateTimeField(_("reminder sent at"), null=True, blank=True)
 
     class Meta:
         ordering            = ["-scheduled_date", "-scheduled_time"]

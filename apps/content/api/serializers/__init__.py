@@ -6,7 +6,14 @@ from .blog import (
 )
 from .case_studies import CaseStudyDetailSerializer, CaseStudyListSerializer
 from .common import MediaAssetSerializer, SEOSerializerMixin
+from .expertise import AICapabilitySerializer, TechExpertiseAreaSerializer
 from .misc import TeamMemberSerializer, TestimonialSerializer
+from .partners import CertificationSerializer, PartnerSerializer
+from .portfolio import (
+    PortfolioGalleryImageSerializer,
+    PortfolioProjectDetailSerializer,
+    PortfolioProjectListSerializer,
+)
 from .services import ServiceDetailSerializer, ServiceListSerializer
 from .taxonomy import (
     FAQSerializer,
@@ -34,4 +41,11 @@ __all__ = [
     "BlogPostDetailSerializer",
     "TeamMemberSerializer",
     "TestimonialSerializer",
+    "PartnerSerializer",
+    "CertificationSerializer",
+    "AICapabilitySerializer",
+    "TechExpertiseAreaSerializer",
+    "PortfolioGalleryImageSerializer",
+    "PortfolioProjectListSerializer",
+    "PortfolioProjectDetailSerializer",
 ]

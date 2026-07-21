@@ -1,0 +1,8 @@
+# Pashto — minimal placeholder translations for AUTOMEX.
+# Generated to satisfy Django's check_for_language() which requires a
+# compiled .mo file to exist for the language to be usable in admin forms.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: ps\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"

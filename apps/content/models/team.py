@@ -52,6 +52,34 @@ class TeamMember(UUIDModel, TimeStampedModel, OrderableModel):
     is_leadership = models.BooleanField(_("leadership"), default=False)
     is_active     = models.BooleanField(_("active"), default=True, db_index=True)
 
+    # ── Enterprise fields ──────────────────────────────────────────
+    specializations = models.JSONField(
+        _("specializations"), default=list, blank=True,
+        help_text=_('List of specialization areas, e.g. ["NLP", "MLOps"]'),
+    )
+    certifications = models.JSONField(
+        _("certifications"), default=list, blank=True,
+        help_text=_('List of certifications, e.g. ["AWS Solutions Architect", "Google Cloud Professional"]'),
+    )
+    years_of_experience = models.PositiveIntegerField(
+        _("years of experience"), null=True, blank=True,
+    )
+    education = models.JSONField(
+        _("education"), default=list, blank=True,
+        help_text=_('List of education entries, e.g. [{"degree": "MSc", "institution": "MIT", "year": 2015}].'),
+    )
+    languages = models.JSONField(
+        _("languages"), default=list, blank=True,
+        help_text=_('List of spoken languages, e.g. ["English", "Spanish"]'),
+    )
+    is_available_for_consulting = models.BooleanField(
+        _("available for consulting"), default=False, db_index=True,
+    )
+    projects_showcase = models.ManyToManyField(
+        "content.CaseStudy", blank=True,
+        related_name="team_members", verbose_name=_('projects showcase'),
+    )
+
     class Meta:
         ordering            = ["order", "full_name"]
         verbose_name        = _("team member")

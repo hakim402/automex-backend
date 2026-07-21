@@ -24,6 +24,10 @@ UNFOLD_ADDITIONS = {
     # See apps/accounts/dashboard.py::dashboard_callback
     "DASHBOARD_CALLBACK": "apps.accounts.dashboard.dashboard_callback",
 
+    # Site symbol — used in the sidebar header as a monogram/avatar.
+    # Falls back to first character of SITE_TITLE when unset.
+    "SITE_SYMBOL": "apps.accounts.dashboard.get_site_symbol",
+
     # Modern indigo/violet enterprise palette (Tailwind color scale).
     # Optional — remove this key to keep Unfold's default palette.
     "COLORS": {
@@ -44,10 +48,14 @@ UNFOLD_ADDITIONS = {
     "SIDEBAR": {
         "show_search": True,
         "show_all_applications": False,
+        # Badge shown next to each sidebar group title to indicate item count
+        # when non-zero. Leave unset for no badge.
+        "badge": lambda request: None,
         "navigation": [
             # ── Overview ──────────────────────────────────────────────
             {
                 "title": _("Overview"),
+                "collapsible": False,
                 "items": [
                     {
                         "title": _("Dashboard"),
@@ -147,6 +155,23 @@ UNFOLD_ADDITIONS = {
                     },
                 ],
             },
+            # ── Integrations & API ──────────────────────────────────
+            {
+                "title": _("Integrations & API"),
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("API Keys"),
+                        "icon": "vpn_key",
+                        "link": reverse_lazy("admin:core_apikey_changelist"),
+                    },
+                    {
+                        "title": _("Third-Party Integrations"),
+                        "icon": "settings_input_component",
+                        "link": reverse_lazy("admin:notifications_thirdpartyintegration_changelist"),
+                    },
+                ],
+            },
             # ── Website Content (apps.content) ───────────────────────
             {
                 "title": _("Website Content"),
@@ -212,6 +237,88 @@ UNFOLD_ADDITIONS = {
                         "icon": "timeline",
                         "link": reverse_lazy("admin:content_processstep_changelist"),
                     },
+                    {
+                        "title": _("Portfolio Projects"),
+                        "icon": "photo_library",
+                        "link": reverse_lazy("admin:content_portfolioproject_changelist"),
+                    },
+                    {
+                        "title": _("Blog Authors"),
+                        "icon": "person_book",
+                        "link": reverse_lazy("admin:content_blogauthor_changelist"),
+                    },
+                    {
+                        "title": _("AI Capabilities"),
+                        "icon": "psychology",
+                        "link": reverse_lazy("admin:content_aicapability_changelist"),
+                    },
+                    {
+                        "title": _("Tech Expertise"),
+                        "icon": "code_blocks",
+                        "link": reverse_lazy("admin:content_techexpertisearea_changelist"),
+                    },
+                    {
+                        "title": _("Partners"),
+                        "icon": "handshake",
+                        "link": reverse_lazy("admin:content_partner_changelist"),
+                    },
+                    {
+                        "title": _("Certifications"),
+                        "icon": "verified",
+                        "link": reverse_lazy("admin:content_certification_changelist"),
+                    },
+                ],
+            },
+            # ── Service Detail Pages ──────────────────────────────
+            {
+                "title": _("Service Detail Pages"),
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Hero Images"),
+                        "icon": "collections",
+                        "link": reverse_lazy("admin:content_serviceheroimage_changelist"),
+                    },
+                    {
+                        "title": _("Process Steps"),
+                        "icon": "account_tree",
+                        "link": reverse_lazy("admin:content_serviceprocessstep_changelist"),
+                    },
+                    {
+                        "title": _("Deliverables"),
+                        "icon": "inventory",
+                        "link": reverse_lazy("admin:content_servicedeliverable_changelist"),
+                    },
+                    {
+                        "title": _("Add-Ons"),
+                        "icon": "add_shopping_cart",
+                        "link": reverse_lazy("admin:content_serviceaddon_changelist"),
+                    },
+                    {
+                        "title": _("Comparison Rows"),
+                        "icon": "compare",
+                        "link": reverse_lazy("admin:content_servicecomparisonrow_changelist"),
+                    },
+                    {
+                        "title": _("Client Logos"),
+                        "icon": "apartment",
+                        "link": reverse_lazy("admin:content_serviceclientlogo_changelist"),
+                    },
+                    {
+                        "title": _("Testimonials"),
+                        "icon": "rate_review",
+                        "link": reverse_lazy("admin:content_servicetestimonial_changelist"),
+                    },
+                    {
+                        "title": _("Documents"),
+                        "icon": "description",
+                        "link": reverse_lazy("admin:content_servicedocument_changelist"),
+                    },
+                    {
+                        "title": _("SLAs"),
+                        "icon": "verified_user",
+                        "link": reverse_lazy("admin:content_servicesla_changelist"),
+                    },
                 ],
             },
             # ── Sales & CRM (apps.crm) ────────────────────────────────
@@ -225,6 +332,11 @@ UNFOLD_ADDITIONS = {
                         "link": reverse_lazy("admin:crm_lead_changelist"),
                     },
                     {
+                        "title": _("Lead Activities"),
+                        "icon": "timeline",
+                        "link": reverse_lazy("admin:crm_leadactivity_changelist"),
+                    },
+                    {
                         "title": _("Consultation Bookings"),
                         "icon": "calendar_month",
                         "link": reverse_lazy("admin:crm_consultationbooking_changelist"),
@@ -233,6 +345,11 @@ UNFOLD_ADDITIONS = {
                         "title": _("Availability Slots"),
                         "icon": "event_available",
                         "link": reverse_lazy("admin:crm_availabilityslot_changelist"),
+                    },
+                    {
+                        "title": _("Support Tickets"),
+                        "icon": "support_agent",
+                        "link": reverse_lazy("admin:crm_supportticket_changelist"),
                     },
                     {
                         "title": _("Newsletter Subscribers"),
@@ -275,6 +392,11 @@ UNFOLD_ADDITIONS = {
                         "title": _("Preferences"),
                         "icon": "tune",
                         "link": reverse_lazy("admin:notifications_notificationpreference_changelist"),
+                    },
+                    {
+                        "title": _("Delivery Attempts"),
+                        "icon": "receipt_long",
+                        "link": reverse_lazy("admin:notifications_notificationdeliveryattempt_changelist"),
                     },
                 ],
             },

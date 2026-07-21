@@ -46,6 +46,7 @@ class AIConversationAdmin(ModelAdmin):
         "session_id",
         "channel",
         "language",
+        "display_user",
         "lead",
         "display_lead_captured",
         "display_active",
@@ -58,22 +59,42 @@ class AIConversationAdmin(ModelAdmin):
         "is_active",
         ("started_at", RangeDateFilter),
     ]
-    search_fields = ["session_id", "lead__email", "lead__full_name"]
-    autocomplete_fields = ["lead"]
+    search_fields = ["session_id", "user__email", "lead__email", "lead__full_name"]
+    autocomplete_fields = ["lead", "user"]
     readonly_fields = ["id", "session_id", "started_at", "ended_at", "ip_address", "user_agent", "metadata"]
     inlines = [AIMessageInline]
     date_hierarchy = "started_at"
     list_filter_submit = True
+    warn_unsaved_form = True
     actions = ["action_close_conversation"]
 
     fieldsets = (
         (
             _("Conversation"),
-            {"fields": ("id", "session_id", "channel", "language", "lead", "lead_captured"), "classes": ["tab"]},
+            {"fields": ("id", "session_id", "channel", "language", "user", "lead", "lead_captured"), "classes": ["tab"],
+             "description": _(
+                 "Who is talking and on which channel (website widget, API, etc.). "
+                 "Lead captured flags whether a lead was created from this conversation."
+             )},
         ),
-        (_("Context"), {"fields": ("page_url", "ip_address", "user_agent", "metadata"), "classes": ["tab"]}),
-        (_("Lifecycle"), {"fields": ("is_active", "started_at", "ended_at"), "classes": ["tab"]}),
+        (_("Context"), {"fields": ("page_url", "ip_address", "user_agent", "metadata"), "classes": ["tab"],
+         "description": _(
+             "Technical context captured from the user's browser. "
+             "Page URL is the page they were viewing when the conversation started. "
+             "Metadata stores additional JSON context (referrer, screen size, etc.)."
+         )}),
+        (_("Lifecycle"), {"fields": ("is_active", "started_at", "ended_at"), "classes": ["tab"],
+         "description": _(
+             "Active conversations are ongoing. Manually close to end a conversation. "
+             "Ended at is auto-set when the session expires or is manually closed."
+         )}),
     )
+
+    @display(description=_("User"))
+    def display_user(self, obj):
+        if obj.user:
+            return obj.user.email
+        return "-"
 
     @display(description=_("Lead Captured"), boolean=True)
     def display_lead_captured(self, obj):
@@ -104,9 +125,19 @@ class AIKnowledgeEntryAdmin(ActiveToggleAdminMixin, ModelAdmin):
     actions = ["action_activate", "action_deactivate"]
     ordering = ["category", "question"]
     list_filter_submit = True
+    warn_unsaved_form = True
 
     fieldsets = (
-        (_("Q&A"), {"fields": ("id", "question", "answer", "category"), "classes": ["tab"]}),
-        (_("Linking"), {"fields": ("related_service", "is_active"), "classes": ["tab"]}),
-        (_("Audit"), {"fields": ("created_at", "updated_at"), "classes": ["tab"]}),
+        (_("Q&A"), {"fields": ("id", "question", "answer", "category"), "classes": ["tab"],
+         "description": _(
+             "Question phrasing should match common user queries (the AI matches semantically). "
+             "Answer supports Markdown formatting. Category groups related entries for easier management."
+         )}),
+        (_("Linking"), {"fields": ("related_service", "is_active"), "classes": ["tab"],
+         "description": _(
+             "Optionally tie this knowledge entry to a specific service for contextual matching. "
+             "Inactive entries are excluded from the AI's knowledge base."
+         )}),
+        (_("Audit"), {"fields": ("created_at", "updated_at"), "classes": ["tab"],
+         "description": _("Auto-managed timestamps.")}),
     )
