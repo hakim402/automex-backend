@@ -39,7 +39,7 @@ class ServiceListSerializer(serializers.ModelSerializer):
 
 class ServiceHeroImageSerializer(serializers.Serializer):
     id       = serializers.UUIDField()
-    image    = MediaAssetSerializer()
+    image    = MediaAssetSerializer(allow_null=True)
     caption  = serializers.CharField()
     is_cover = serializers.BooleanField()
     order    = serializers.IntegerField()
@@ -80,7 +80,7 @@ class ServiceAddOnSerializer(serializers.Serializer):
     id                        = serializers.UUIDField()
     name                      = serializers.CharField()
     description               = serializers.CharField(allow_blank=True)
-    price                     = serializers.DecimalField(max_digits=10, decimal_places=2)
+    price                     = serializers.DecimalField(max_digits=10, decimal_places=2, allow_null=True)
     is_included_in_enterprise = serializers.BooleanField()
     order                     = serializers.IntegerField()
 
@@ -97,7 +97,7 @@ class ServiceComparisonRowSerializer(serializers.Serializer):
 
 class ServiceClientLogoSerializer(serializers.Serializer):
     id          = serializers.UUIDField()
-    logo        = MediaAssetSerializer()
+    logo        = MediaAssetSerializer(allow_null=True)
     client_name = serializers.CharField(allow_blank=True)
     client_url  = serializers.CharField(allow_blank=True)
     order       = serializers.IntegerField()
@@ -135,11 +135,14 @@ class ServiceDocumentSerializer(serializers.Serializer):
     id            = serializers.UUIDField()
     title         = serializers.CharField()
     description   = serializers.CharField(allow_blank=True)
-    file          = MediaAssetSerializer()
+    file          = MediaAssetSerializer(allow_null=True)
     document_type = serializers.CharField()
-    document_type_display = serializers.CharField()
+    document_type_display = serializers.SerializerMethodField()
     is_public     = serializers.BooleanField()
     order         = serializers.IntegerField()
+
+    def get_document_type_display(self, obj):
+        return obj.get_document_type_display()
 
 
 class ServiceSLASerializer(serializers.Serializer):
