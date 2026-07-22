@@ -35,8 +35,8 @@ services:
       - .env
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2
     volumes:
-      # Bind mount so Nginx can serve uploaded media directly.
-      # Static files are served by Whitenoise from inside the container.
+      # Media files — bind-mounted so they persist across container rebuilds
+      # and can be served directly by Nginx in production.
       - ./media:/app/media
     ports:
       - "8001:8000"

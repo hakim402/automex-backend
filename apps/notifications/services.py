@@ -473,6 +473,7 @@ def notify_user_of_request_submitted(lead) -> Notification | None:
         context={"lead_id": str(lead.id), "full_name": lead.full_name},
         related_object=lead,
         priority=NotificationPriority.NORMAL,
+        language=getattr(lead, "language", "en"),
     )
 
 
@@ -500,6 +501,7 @@ def notify_user_of_status_change(lead) -> Notification | None:
         context={"lead_id": str(lead.id), "status": lead.status},
         related_object=lead,
         priority=NotificationPriority.NORMAL,
+        language=getattr(lead, "language", "en"),
     )
 
 

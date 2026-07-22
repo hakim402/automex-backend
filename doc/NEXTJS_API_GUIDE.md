@@ -310,8 +310,8 @@ Base: `GET /api/v1/` | Header: `X-API-Key` | Paginated: `{ count, next, previous
 interface ServiceListItem {
   id: string;
   slug: string;
-  name: string;
-  short_description: string;
+  /** 🔤 */ name: string;
+  /** 🔤 */ short_description: string;
   icon: string;                     // e.g. "lucide:code"
   hero_image: MediaAsset | null;
   category: ServiceCategory | null;
@@ -323,10 +323,10 @@ interface ServiceListItem {
 **Service Detail** (adds to List):
 ```ts
 interface ServiceDetail extends ServiceListItem {
-  overview: string;
-  problems_we_solve: string;
-  features: string;                 // one per line — split for bullets
-  benefits: string;                 // one per line — split for bullets
+  /** 🔤 */ overview: string;
+  /** 🔤 */ problems_we_solve: string;
+  /** 🔤 */ features: string;                 // one per line — split for bullets
+  /** 🔤 */ benefits: string;                 // one per line — split for bullets
   thumbnail_image: MediaAsset | null;
   video_presentation: MediaAsset | null;
   brochure: MediaAsset | null;
@@ -342,22 +342,22 @@ interface ServiceDetail extends ServiceListItem {
   currency: string;                 // "USD"
   delivery_time_estimate: string;   // "4-6 weeks"
   team_size_range: string;          // "5-10 engineers"
-  cta_text: string;
-  cta_url: string;
+  /** 🔤 */ cta_text: string;
+  /** 🔤 */ cta_url: string;
   key_metrics: Record<string, number>;  // {"projects_delivered":150}
   enterprise_features: string[];
   // Sub-model arrays (empty [] if none)
-  hero_images: Array<{ id: string; image: MediaAsset; caption: string; is_cover: boolean; order: number }>;
-  process_steps: Array<{ id: string; title: string; description: string; icon: string; order: number }>;
-  deliverables: Array<{ id: string; title: string; description: string; icon: string; order: number }>;
-  add_ons: Array<{ id: string; name: string; description: string; price: string; is_included_in_enterprise: boolean; order: number }>;
-  comparison_rows: Array<{ id: string; feature_name: string; standard_value: string; premium_value: string; enterprise_value: string; is_highlighted: boolean; order: number }>;
-  client_logos: Array<{ id: string; logo: MediaAsset; client_name: string; client_url: string; order: number }>;
-  service_testimonials: Array<{ id: string; testimonial_id: string; client_name: string; client_role: string; client_company: string; client_avatar: MediaAsset | null; quote: string; rating: number; is_featured: boolean; order: number }>;
-  documents: Array<{ id: string; title: string; description: string; file: MediaAsset; document_type: string; document_type_display: string; is_public: boolean; order: number }>;
-  slas: Array<{ id: string; guarantee_name: string; value: string; description: string; icon: string; order: number }>;
+  hero_images: Array<{ id: string; image: MediaAsset; /** 🔤 */ caption: string; is_cover: boolean; order: number }>;
+  process_steps: Array<{ id: string; /** 🔤 */ title: string; /** 🔤 */ description: string; icon: string; order: number }>;
+  deliverables: Array<{ id: string; /** 🔤 */ title: string; /** 🔤 */ description: string; icon: string; order: number }>;
+  add_ons: Array<{ id: string; /** 🔤 */ name: string; /** 🔤 */ description: string; price: string; is_included_in_enterprise: boolean; order: number }>;
+  comparison_rows: Array<{ id: string; /** 🔤 */ feature_name: string; standard_value: string; premium_value: string; enterprise_value: string; is_highlighted: boolean; order: number }>;
+  client_logos: Array<{ id: string; logo: MediaAsset; /** 🔤 */ client_name: string; client_url: string; order: number }>;
+  service_testimonials: Array<{ id: string; testimonial_id: string; /** 🔤 */ client_name: string; client_role: string; client_company: string; client_avatar: MediaAsset | null; /** 🔤 */ quote: string; rating: number; is_featured: boolean; order: number }>;
+  documents: Array<{ id: string; /** 🔤 */ title: string; /** 🔤 */ description: string; file: MediaAsset; document_type: string; document_type_display: string; is_public: boolean; order: number }>;
+  slas: Array<{ id: string; /** 🔤 */ guarantee_name: string; /** 🔤 */ value: string; /** 🔤 */ description: string; icon: string; order: number }>;
   related_services: ServiceListItem[];
-  faqs: Array<{ id: string; question: string; answer: string; category: string; service: string; order: number }>;
+  faqs: Array<{ id: string; /** 🔤 */ question: string; /** 🔤 */ answer: string; category: string; service: string; order: number }>;
   published_at: string;
   seo: SEOObject;
 }
@@ -422,11 +422,14 @@ interface ServiceDetail extends ServiceListItem {
 
 ### Shared Response Types
 
+> 🔤 Fields marked with `🔤` are **language-dependent** — their value changes based on the `?lang=` query parameter or `Accept-Language` header. When no translation exists for the requested language, the API falls back to English (never returns empty strings). See [Section 13](#13-language-handling) for details.
+
 ```ts
 interface MediaAsset {
   id: string;
   url: string;
   alt_text: string;
+  caption: string;
   width: number;
   height: number;
   file_type: string;              // "image" | "video" | "document"
@@ -439,19 +442,243 @@ interface PaginatedResponse<T> {
   results: T[];
 }
 
+// ── Taxonomy ───────────────────────────────────────────────────────
+
 interface ServiceCategory {
-  id: string; name: string; slug: string; icon: string; order: number;
+  id: string;
+  /** 🔤 */ name: string;
+  slug: string;
+  /** 🔤 */ description: string;
+  icon: string;
+  order: number;
 }
 
 interface Technology {
-  id: string; name: string; slug: string;
-  category: string;              // "backend" | "frontend" | ...
-  icon: string; website_url: string; order: number;
+  id: string;
+  /** 🔤 */ name: string;
+  slug: string;
+  category: string;              // "backend" | "frontend" | "database" | "cloud" | "ai" | "enterprise" | "mobile" | "devops"
+  icon: string;
+  website_url: string;
+  order: number;
 }
 
 interface Industry {
-  id: string; name: string; slug: string;
-  description: string; icon: string; order: number;
+  id: string;
+  /** 🔤 */ name: string;
+  /** 🔤 */ slug: string;
+  /** 🔤 */ description: string;
+  icon: string;
+  order: number;
+}
+
+interface ProcessStep {
+  id: string;
+  /** 🔤 */ title: string;
+  /** 🔤 */ description: string;
+  icon: string;
+  order: number;
+}
+
+interface FAQ {
+  id: string;
+  /** 🔤 */ question: string;
+  /** 🔤 */ answer: string;
+  category: string;              // "general" | "pricing" | "process" | "service"
+  service: string | null;        // Service UUID
+  order: number;
+}
+
+// ── Blog ───────────────────────────────────────────────────────────
+
+interface BlogCategory {
+  id: string;
+  /** 🔤 */ name: string;
+  slug: string;
+  /** 🔤 */ description: string;
+  order: number;
+}
+
+interface BlogTag {
+  id: string;
+  /** 🔤 */ name: string;
+  slug: string;
+}
+
+interface BlogAuthor {
+  id: string;
+  /** 🔤 */ full_name: string;
+  /** 🔤 */ bio: string;
+  /** 🔤 */ role_title: string;
+  slug: string;
+  avatar: MediaAsset | null;
+  linkedin_url: string;
+  github_url: string;
+}
+
+// ── Team ───────────────────────────────────────────────────────────
+
+interface TeamMember {
+  id: string;
+  /** 🔤 */ full_name: string;
+  slug: string;
+  /** 🔤 */ role_title: string;
+  department: string;            // "engineering" | "design" | "ai" | "devops" | "management" | "sales" | "qa" | "other"
+  /** 🔤 */ bio: string;
+  photo: MediaAsset | null;
+  linkedin_url: string;
+  github_url: string;
+  twitter_url: string;
+  is_leadership: boolean;
+  order: number;
+}
+
+// ── Testimonials ───────────────────────────────────────────────────
+
+interface Testimonial {
+  id: string;
+  /** 🔤 */ client_name: string;
+  /** 🔤 */ client_role: string;
+  /** 🔤 */ client_company: string;
+  client_avatar: MediaAsset | null;
+  /** 🔤 */ quote: string;
+  rating: number;                // 1–5
+  source: string;                // "manual" | "clutch" | "google" | "linkedin" | "trustpilot"
+  source_url: string;
+  related_case_study: string | null;
+  related_service: string | null;
+  is_featured: boolean;
+  order: number;
+}
+
+// ── Partners & Certifications ──────────────────────────────────────
+
+interface Partner {
+  id: string;
+  /** 🔤 */ name: string;
+  slug: string;
+  logo: MediaAsset | null;
+  website_url: string;
+  partner_type: string;          // "technology" | "implementation" | "cloud" | "integration" | "reseller"
+  partner_type_display: string;
+  tier: string;                  // "silver" | "gold" | "platinum" | "diamond"
+  tier_display: string;
+  /** 🔤 */ description: string;
+  is_active: boolean;
+  order: number;
+}
+
+interface Certification {
+  id: string;
+  /** 🔤 */ name: string;
+  /** 🔤 */ issuer: string;
+  badge_image: MediaAsset | null;
+  credential_url: string;
+  credential_id: string;
+  issue_date: string | null;
+  expiry_date: string | null;
+  related_services: string[];    // Service UUIDs
+  is_active: boolean;
+  order: number;
+}
+
+// ── AI Capabilities & Tech Expertise ───────────────────────────────
+
+interface AICapability {
+  id: string;
+  /** 🔤 */ name: string;
+  slug: string;
+  /** 🔤 */ description: string;
+  category: string;              // "nlp" | "computer_vision" | "predictive_analytics" | "generative_ai" | "automation" | "rag_agents" | "mlops"
+  category_display: string;
+  maturity_level: string;        // "research" | "production" | "experimental"
+  maturity_level_display: string;
+  icon: string;
+  demo_url: string;
+  cover_image: MediaAsset | null;
+  related_services: string[];
+  technologies: Technology[];
+  is_active: boolean;
+  order: number;
+}
+
+interface TechExpertiseArea {
+  id: string;
+  /** 🔤 */ name: string;
+  slug: string;
+  /** 🔤 */ description: string;
+  icon: string;
+  category: string;              // "architecture" | "cloud" | "data_engineering" | "ai" | "security" | "mobile" | "devops" | "qa"
+  category_display: string;
+  technologies: Technology[];
+  case_studies: string[];
+  is_active: boolean;
+  order: number;
+}
+
+// ── Portfolio ──────────────────────────────────────────────────────
+
+interface PortfolioProjectListItem {
+  id: string;
+  slug: string;
+  /** 🔤 */ title: string;
+  /** 🔤 */ short_description: string;
+  cover_image: MediaAsset | null;
+  /** 🔤 */ client_name: string;
+  completion_year: number | null;
+  industry: Industry | null;
+  is_featured: boolean;
+  is_published: boolean;
+  order: number;
+}
+
+interface PortfolioProjectDetail extends PortfolioProjectListItem {
+  services: Array<{ id: string; slug: string; /** 🔤 */ name: string }>;
+  technologies: Technology[];
+  project_url: string;
+  gallery: PortfolioGalleryImage[];
+  created_at: string;
+}
+
+interface PortfolioGalleryImage {
+  id: string;
+  image: MediaAsset;
+  /** 🔤 */ caption: string;
+  order: number;
+}
+
+// ── Case Studies ───────────────────────────────────────────────────
+
+interface CaseStudyListItem {
+  id: string;
+  slug: string;
+  /** 🔤 */ title: string;
+  client_name: string;
+  client_industry: Industry | null;
+  thumbnail: MediaAsset | null;
+  is_featured: boolean;
+  order: number;
+  published_at: string;
+}
+
+interface CaseStudyDetail extends CaseStudyListItem {
+  /** 🔤 */ overview: string;
+  /** 🔤 */ challenge: string;
+  /** 🔤 */ solution: string;
+  /** 🔤 */ results: string;
+  client_logo: MediaAsset | null;
+  technologies: Technology[];
+  gallery: CaseStudyGalleryImage[];
+  project_url: string;
+  project_duration_weeks: number | null;
+  seo: SEOObject;
+}
+
+interface CaseStudyGalleryImage {
+  id: string;
+  media: MediaAsset;
+  /** 🔤 */ caption: string;
+  order: number;
 }
 ```
 
@@ -734,19 +961,84 @@ Base: `/api/v1/crm/guest/` | Header: `X-API-Key` | For non-logged-in visitors wi
 
 ---
 
-## 13. Language Handling
+## 13. Language Handling (i18n)
 
-### Resolution order
+### Architecture
+
+AUTOMEX uses [django-parler](https://django-parler.readthedocs.io/) for multi-language content via a **shared-model translation table** pattern. Each `TranslatableModel` stores language-dependent fields in a separate translations table. The API resolves the requested language server-side and returns the appropriate translation — the frontend does NOT need to know anything about translation tables.
+
+### Resolution Order
+
 1. `?lang=fr` query param (highest priority)
-2. `Accept-Language` header
-3. Falls back to `en`
+2. `Accept-Language` HTTP header
+3. Falls back to `en` (English)
 
-### Supported codes
-`en` `es` `de` `fr` `it` `nl` `zh` `ar` `fa` `ps`
+### Supported Language Codes
 
-`ar`, `fa`, `ps` are RTL — set `dir="rtl"` on `<html>`.
+| Code | Language | Direction |
+|---|---|---|
+| `en` | English | LTR |
+| `es` | Spanish | LTR |
+| `de` | German | LTR |
+| `fr` | French | LTR |
+| `it` | Italian | LTR |
+| `nl` | Dutch | LTR |
+| `zh-hans` | Chinese (Simplified) | LTR |
+| `ar` | Arabic | **RTL** |
+| `fa` | Persian | **RTL** |
+| `ps` | Pashto | **RTL** |
 
-### Best practice
+> ⚠️ Note: The language code for Chinese is `zh-hans` (not `zh`).
+>
+> Arabic (`ar`), Persian (`fa`), and Pashto (`ps`) are **RTL languages** — set `dir="rtl"` on the `<html>` element when rendering these locales.
+
+### Fallback Behavior
+
+- **Always-on fallback**: When a translation does not exist for the requested language, the API automatically returns the **English** (`en`) version — never an empty string.
+- **New content**: You can add translations incrementally. No content will break while translations are pending.
+- **SEO fields** (`meta_title`, `meta_description`, `meta_keywords`) fall back to model-level content fields (e.g. `name` / `title` / `short_description`) when no explicit SEO translation is set.
+
+### What Gets Translated
+
+Every text field that appears on the public-facing website is translatable. Non-text fields (images, URLs, booleans, numbers, enums, UUIDs) are NOT translated — they're the same across all languages.
+
+#### Translated Fields by Model
+
+| Model | Translated Fields |
+|---|---|
+| **ServiceCategory** | `name`, `description` |
+| **Technology** | `name`, `description` |
+| **Industry** | `name`, `slug`, `description` |
+| **ProcessStep** | `title`, `description` |
+| **FAQ** | `question`, `answer` |
+| **Service** | `name`, `slug`, `short_description`, `overview`, `problems_we_solve`, `features`, `benefits`, `cta_text`, `cta_url`, `meta_title`, `meta_description`, `meta_keywords` |
+| **ServiceHeroImage** | `caption` |
+| **ServiceDeliverable** | `title`, `description` |
+| **ServiceAddOn** | `name`, `description` |
+| **ServiceComparisonRow** | `feature_name` |
+| **ServiceClientLogo** | `client_name` |
+| **ServiceDocument** | `title`, `description` |
+| **ServiceSLA** | `guarantee_name`, `value`, `description` |
+| **BlogCategory** | `name`, `description` |
+| **BlogTag** | `name` |
+| **BlogAuthor** | `full_name`, `bio`, `role_title` |
+| **BlogPost** | `title`, `slug`, `excerpt`, `content`, `meta_title`, `meta_description`, `meta_keywords` |
+| **BlogHeroImage** | `caption` |
+| **CaseStudy** | `title`, `slug`, `overview`, `challenge`, `solution`, `results`, `meta_title`, `meta_description`, `meta_keywords` |
+| **CaseStudyGalleryImage** | `caption` |
+| **TeamMember** | `full_name`, `role_title`, `bio` |
+| **Testimonial** | `client_name`, `client_role`, `client_company`, `quote` |
+| **Partner** | `name`, `description` |
+| **Certification** | `name`, `issuer` |
+| **AICapability** | `name`, `description` |
+| **TechExpertiseArea** | `name`, `description` |
+| **PortfolioProject** | `title`, `short_description`, `client_name` |
+| **PortfolioGalleryImage** | `caption` |
+
+> 💡 In the TypeScript interfaces throughout this guide, translatable fields are marked with `/** 🔤 */` for quick identification.
+
+### Best Practice
+
 Pass `lang` from your Next.js locale routing explicitly:
 
 ```tsx
@@ -760,7 +1052,28 @@ export default async function ServicePage({ params }: { params: { locale: string
 }
 ```
 
-Missing translations fall back to English server-side — you never get empty strings.
+For SEO `generateMetadata`, always pass `lang` so meta tags are in the correct language:
+
+```ts
+export async function generateMetadata({ params }: {
+  params: { locale: string; slug: string }
+}): Promise<Metadata> {
+  const service = await automexFetch<ServiceDetail>(
+    `/services/${params.slug}/`,
+    { lang: params.locale }
+  );
+  // service.seo.meta_title is now in params.locale (or English fallback)
+  // ...
+}
+```
+
+### Common Mistakes
+
+❌ **Hardcoding `lang: "en"`** — This bypasses the translation system. Always use the user's current locale.
+
+❌ **Re-fetching for every language** — The `automexFetch` client already includes Next.js `fetch` cache with `revalidate`. Different languages are cached separately by URL (via the `?lang=` query param).
+
+❌ **Duplicating content in the frontend** — Don't store translated strings in your Next.js app. Always fetch them from the API with the correct `lang` parameter.
 
 ---
 

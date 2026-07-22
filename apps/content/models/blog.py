@@ -24,10 +24,12 @@ from apps.core.models import (
 )
 
 
-class BlogCategory(UUIDModel, TimeStampedModel, OrderableModel):
-    name        = models.CharField(_("name"), max_length=150)
+class BlogCategory(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
+    translations = TranslatedFields(
+        name        = models.CharField(_("name"), max_length=150),
+        description = models.TextField(_("description"), blank=True),
+    )
     slug        = models.SlugField(_("slug"), max_length=170, unique=True)
-    description = models.TextField(_("description"), blank=True)
     icon        = models.CharField(
         _("icon"), max_length=100, blank=True,
         help_text=_("Icon identifier for the frontend, e.g. 'lucide:book-open'."),
@@ -35,55 +37,59 @@ class BlogCategory(UUIDModel, TimeStampedModel, OrderableModel):
     is_active   = models.BooleanField(_("active"), default=True, db_index=True)
 
     class Meta:
-        ordering            = ["order", "name"]
+        ordering            = ["order"]
         verbose_name        = _("blog category")
         verbose_name_plural = _("blog categories")
 
     def __str__(self) -> str:
-        return self.name
+        return self.safe_translation_getter("name", any_language=True) or self.slug
 
 
-class BlogTag(UUIDModel, TimeStampedModel):
-    name = models.CharField(_("name"), max_length=80)
+class BlogTag(TranslatableModel, UUIDModel, TimeStampedModel):
+    translations = TranslatedFields(
+        name = models.CharField(_("name"), max_length=80),
+    )
     slug = models.SlugField(_("slug"), max_length=100, unique=True)
 
     class Meta:
-        ordering            = ["name"]
+        ordering            = ["slug"]
         verbose_name        = _("blog tag")
         verbose_name_plural = _("blog tags")
 
     def __str__(self) -> str:
-        return self.name
+        return self.safe_translation_getter("name", any_language=True) or self.slug
 
 
-class BlogAuthor(UUIDModel, TimeStampedModel):
+class BlogAuthor(TranslatableModel, UUIDModel, TimeStampedModel):
     """
     Dedicated author profile for blog posts. Separate from the User model
     to support external contributors, guest writers, and public-facing
     bylines with rich profile data.
     """
 
-    full_name = models.CharField(_("full name"), max_length=200)
+    translations = TranslatedFields(
+        full_name  = models.CharField(_("full name"), max_length=200),
+        bio        = models.TextField(_("bio"), blank=True),
+        role_title = models.CharField(_("role title"), max_length=200, blank=True),
+    )
     slug      = models.SlugField(_("slug"), max_length=220, unique=True)
-    bio       = models.TextField(_("bio"), blank=True)
     avatar    = models.ForeignKey(
         "core.MediaAsset",
         on_delete=models.SET_NULL, null=True, blank=True,
         related_name="+", verbose_name=_("avatar"),
     )
-    role_title = models.CharField(_("role title"), max_length=200, blank=True)
     email      = models.EmailField(_("email"), blank=True)
     linkedin_url = models.URLField(_("LinkedIn URL"), blank=True)
     github_url   = models.URLField(_("GitHub URL"), blank=True)
     is_active    = models.BooleanField(_("active"), default=True, db_index=True)
 
     class Meta:
-        ordering            = ["full_name"]
+        ordering            = ["slug"]
         verbose_name        = _("blog author")
         verbose_name_plural = _("blog authors")
 
     def __str__(self) -> str:
-        return self.full_name
+        return self.safe_translation_getter("full_name", any_language=True) or self.slug
 
 
 class BlogPost(TranslatableModel, UUIDModel, TimeStampedModel, PublishableModel, SEOFieldsMixin):
@@ -185,11 +191,18 @@ class BlogPost(TranslatableModel, UUIDModel, TimeStampedModel, PublishableModel,
         super().save(*args, **kwargs)
 
 
-class BlogHeroImage(UUIDModel, TimeStampedModel, OrderableModel):
+class BlogHeroImage(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
     """
     Multiple hero/hero-section images for a blog post.
     Supports a gallery/carousel at the top of the article.
     """
+
+    translations = TranslatedFields(
+        caption = models.CharField(
+            _("caption"), max_length=255, blank=True,
+            help_text=_("Optional caption or overlay text."),
+        ),
+    )
 
     blog_post = models.ForeignKey(
         BlogPost,
@@ -201,10 +214,6 @@ class BlogHeroImage(UUIDModel, TimeStampedModel, OrderableModel):
         "core.MediaAsset",
         on_delete=models.SET_NULL, null=True, blank=True,
         related_name="+", verbose_name=_("image"),
-    )
-    caption = models.CharField(
-        _("caption"), max_length=255, blank=True,
-        help_text=_("Optional caption or overlay text."),
     )
     is_cover = models.BooleanField(
         _("cover image"), default=False,

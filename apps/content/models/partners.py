@@ -9,10 +9,12 @@ from __future__ import annotations
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from parler.models import TranslatableModel, TranslatedFields
+
 from apps.core.models import OrderableModel, TimeStampedModel, UUIDModel
 
 
-class Partner(UUIDModel, TimeStampedModel, OrderableModel):
+class Partner(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
     class PartnerType(models.TextChoices):
         TECHNOLOGY     = "technology",     _("Technology")
         IMPLEMENTATION = "implementation", _("Implementation")
@@ -26,7 +28,10 @@ class Partner(UUIDModel, TimeStampedModel, OrderableModel):
         PLATINUM  = "platinum",  _("Platinum")
         DIAMOND   = "diamond",   _("Diamond")
 
-    name = models.CharField(_("name"), max_length=200)
+    translations = TranslatedFields(
+        name        = models.CharField(_("name"), max_length=200),
+        description = models.TextField(_("description"), blank=True),
+    )
     slug = models.SlugField(_("slug"), max_length=220, unique=True)
     logo = models.ForeignKey(
         "core.MediaAsset",
@@ -42,21 +47,22 @@ class Partner(UUIDModel, TimeStampedModel, OrderableModel):
         _("tier"), max_length=20, choices=Tier.choices, blank=True,
     )
 
-    description = models.TextField(_("description"), blank=True)
     is_active = models.BooleanField(_("active"), default=True, db_index=True)
 
     class Meta:
-        ordering = ["order", "name"]
+        ordering = ["order"]
         verbose_name = _("partner")
         verbose_name_plural = _("partners")
 
     def __str__(self) -> str:
-        return self.name
+        return self.safe_translation_getter("name", any_language=True) or self.slug
 
 
-class Certification(UUIDModel, TimeStampedModel, OrderableModel):
-    name = models.CharField(_("name"), max_length=250)
-    issuer = models.CharField(_("issuer"), max_length=200)
+class Certification(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
+    translations = TranslatedFields(
+        name   = models.CharField(_("name"), max_length=250),
+        issuer = models.CharField(_("issuer"), max_length=200),
+    )
     badge_image = models.ForeignKey(
         "core.MediaAsset",
         on_delete=models.SET_NULL, null=True, blank=True,
@@ -77,9 +83,11 @@ class Certification(UUIDModel, TimeStampedModel, OrderableModel):
     is_active = models.BooleanField(_("active"), default=True, db_index=True)
 
     class Meta:
-        ordering = ["order", "name"]
+        ordering = ["order"]
         verbose_name = _("certification")
         verbose_name_plural = _("certifications")
 
     def __str__(self) -> str:
-        return f"{self.name} — {self.issuer}"
+        name = self.safe_translation_getter("name", any_language=True) or "Unknown"
+        issuer = self.safe_translation_getter("issuer", any_language=True) or ""
+        return f"{name} — {issuer}"

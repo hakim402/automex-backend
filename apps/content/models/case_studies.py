@@ -146,7 +146,7 @@ class CaseStudy(
         super().save(*args, **kwargs)
 
 
-class CaseStudyGalleryImage(UUIDModel, TimeStampedModel, OrderableModel):
+class CaseStudyGalleryImage(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
     """Additional project screenshots/photos beyond the main thumbnail."""
 
     class ImageType(models.TextChoices):
@@ -154,6 +154,10 @@ class CaseStudyGalleryImage(UUIDModel, TimeStampedModel, OrderableModel):
         DESIGN       = "design",       _("Design Mockup")
         DEMO         = "demo",         _("Demo")
         ARCHITECTURE = "architecture", _("Architecture Diagram")
+
+    translations = TranslatedFields(
+        caption = models.CharField(_("caption"), max_length=300, blank=True),
+    )
 
     case_study = models.ForeignKey(
         CaseStudy, on_delete=models.CASCADE,
@@ -163,7 +167,6 @@ class CaseStudyGalleryImage(UUIDModel, TimeStampedModel, OrderableModel):
         "core.MediaAsset", on_delete=models.CASCADE,
         related_name="+", verbose_name=_("media"),
     )
-    caption = models.CharField(_("caption"), max_length=300, blank=True)
     is_before_after = models.BooleanField(
         _("before/after image"), default=False,
         help_text=_("If True, this image is part of a before/after comparison slider."),

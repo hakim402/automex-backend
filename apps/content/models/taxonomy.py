@@ -16,18 +16,21 @@ from parler.models import TranslatableModel, TranslatedFields
 from apps.core.models import OrderableModel, TimeStampedModel, UUIDModel
 
 
-class ServiceCategory(UUIDModel, TimeStampedModel, OrderableModel):
+class ServiceCategory(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
     """Optional grouping for the Services Overview grid/nav."""
 
-    name      = models.CharField(_("name"), max_length=150)
+    translations = TranslatedFields(
+        name        = models.CharField(_("name"), max_length=150),
+        description = models.TextField(
+            _("description"), blank=True,
+            help_text=_("SEO-rich description for category landing pages."),
+        ),
+    )
+
     slug      = models.SlugField(_("slug"), max_length=170, unique=True)
     icon      = models.CharField(
         _("icon"), max_length=100, blank=True,
         help_text=_("Icon identifier used by the frontend, e.g. 'lucide:cpu'."),
-    )
-    description = models.TextField(
-        _("description"), blank=True,
-        help_text=_("SEO-rich description for category landing pages."),
     )
     icon_image = models.ForeignKey(
         "core.MediaAsset",
@@ -42,15 +45,15 @@ class ServiceCategory(UUIDModel, TimeStampedModel, OrderableModel):
     is_active = models.BooleanField(_("active"), default=True, db_index=True)
 
     class Meta:
-        ordering            = ["order", "name"]
+        ordering            = ["order"]
         verbose_name        = _("service category")
         verbose_name_plural = _("service categories")
 
     def __str__(self) -> str:
-        return self.name
+        return self.safe_translation_getter("name", any_language=True) or self.slug
 
 
-class Technology(UUIDModel, TimeStampedModel, OrderableModel):
+class Technology(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
     """Individual technology/tool shown in the Technologies grid and on service pages."""
 
     class Category(models.TextChoices):
@@ -69,15 +72,18 @@ class Technology(UUIDModel, TimeStampedModel, OrderableModel):
         ADVANCED     = "advanced",     _("Advanced")
         INTERMEDIATE = "intermediate", _("Intermediate")
 
-    name        = models.CharField(_("name"), max_length=100)
+    translations = TranslatedFields(
+        name        = models.CharField(_("name"), max_length=100),
+        description = models.TextField(
+            _("description"), blank=True,
+            help_text=_("Detailed description for technology detail pages or tooltips."),
+        ),
+    )
+
     slug        = models.SlugField(_("slug"), max_length=120, unique=True)
     category    = models.CharField(_("category"), max_length=20, choices=Category.choices, db_index=True)
     icon        = models.CharField(_("icon"), max_length=100, blank=True)
     website_url = models.URLField(_("website URL"), blank=True)
-    description = models.TextField(
-        _("description"), blank=True,
-        help_text=_("Detailed description for technology detail pages or tooltips."),
-    )
     proficiency_level = models.CharField(
         _("proficiency level"), max_length=20,
         choices=ProficiencyLevel.choices, default=ProficiencyLevel.ADVANCED,
@@ -93,13 +99,13 @@ class Technology(UUIDModel, TimeStampedModel, OrderableModel):
     is_active   = models.BooleanField(_("active"), default=True, db_index=True)
 
     class Meta:
-        ordering            = ["category", "order", "name"]
+        ordering            = ["category", "order"]
         verbose_name        = _("technology")
         verbose_name_plural = _("technologies")
         indexes = [models.Index(fields=["category", "is_active"], name="idx_tech_category_active")]
 
     def __str__(self) -> str:
-        return self.name
+        return self.safe_translation_getter("name", any_language=True) or self.slug
 
 
 class Industry(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):

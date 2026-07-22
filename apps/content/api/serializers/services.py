@@ -40,9 +40,18 @@ class ServiceListSerializer(serializers.ModelSerializer):
 class ServiceHeroImageSerializer(serializers.Serializer):
     id       = serializers.UUIDField()
     image    = MediaAssetSerializer(allow_null=True)
-    caption  = serializers.CharField()
+    title    = serializers.SerializerMethodField()
+    caption  = serializers.SerializerMethodField()
     is_cover = serializers.BooleanField()
     order    = serializers.IntegerField()
+
+    def get_title(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("title", language_code=lang) or ""
+
+    def get_caption(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("caption", language_code=lang) or ""
 
 
 class ServiceProcessStepItemSerializer(serializers.Serializer):
@@ -53,11 +62,12 @@ class ServiceProcessStepItemSerializer(serializers.Serializer):
     order            = serializers.IntegerField()
 
     def to_representation(self, instance):
+        lang = self.context.get("language_code", "en")
         title = instance.custom_title or (
-            instance.process_step.safe_translation_getter("title", any_language=True) or ""
+            instance.process_step.safe_translation_getter("title", language_code=lang) or ""
         )
         description = instance.custom_description or (
-            instance.process_step.safe_translation_getter("description", any_language=True) or ""
+            instance.process_step.safe_translation_getter("description", language_code=lang) or ""
         )
         return {
             "id": str(instance.id),
@@ -70,37 +80,61 @@ class ServiceProcessStepItemSerializer(serializers.Serializer):
 
 class ServiceDeliverableSerializer(serializers.Serializer):
     id          = serializers.UUIDField()
-    title       = serializers.CharField()
-    description = serializers.CharField(allow_blank=True)
+    title       = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
     icon        = serializers.CharField(allow_blank=True)
     order       = serializers.IntegerField()
+
+    def get_title(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("title", language_code=lang) or ""
+
+    def get_description(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("description", language_code=lang) or ""
 
 
 class ServiceAddOnSerializer(serializers.Serializer):
     id                        = serializers.UUIDField()
-    name                      = serializers.CharField()
-    description               = serializers.CharField(allow_blank=True)
+    name                      = serializers.SerializerMethodField()
+    description               = serializers.SerializerMethodField()
     price                     = serializers.DecimalField(max_digits=10, decimal_places=2, allow_null=True)
     is_included_in_enterprise = serializers.BooleanField()
     order                     = serializers.IntegerField()
 
+    def get_name(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("name", language_code=lang) or ""
+
+    def get_description(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("description", language_code=lang) or ""
+
 
 class ServiceComparisonRowSerializer(serializers.Serializer):
     id               = serializers.UUIDField()
-    feature_name     = serializers.CharField()
+    feature_name     = serializers.SerializerMethodField()
     standard_value   = serializers.CharField(allow_blank=True)
     premium_value    = serializers.CharField(allow_blank=True)
     enterprise_value = serializers.CharField(allow_blank=True)
     is_highlighted   = serializers.BooleanField()
     order            = serializers.IntegerField()
 
+    def get_feature_name(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("feature_name", language_code=lang) or ""
+
 
 class ServiceClientLogoSerializer(serializers.Serializer):
     id          = serializers.UUIDField()
     logo        = MediaAssetSerializer(allow_null=True)
-    client_name = serializers.CharField(allow_blank=True)
+    client_name = serializers.SerializerMethodField()
     client_url  = serializers.CharField(allow_blank=True)
     order       = serializers.IntegerField()
+
+    def get_client_name(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("client_name", language_code=lang) or ""
 
 
 class ServiceTestimonialItemSerializer(serializers.Serializer):
@@ -117,14 +151,15 @@ class ServiceTestimonialItemSerializer(serializers.Serializer):
 
     def to_representation(self, instance):
         t = instance.testimonial
+        lang = self.context.get("language_code", "en")
         return {
             "id": str(instance.id),
             "testimonial_id": str(t.id),
-            "client_name": t.client_name,
-            "client_role": t.client_role,
-            "client_company": t.client_company,
+            "client_name": t.safe_translation_getter("client_name", language_code=lang) or "",
+            "client_role": t.safe_translation_getter("client_role", language_code=lang) or "",
+            "client_company": t.safe_translation_getter("client_company", language_code=lang) or "",
             "client_avatar": MediaAssetSerializer(t.client_avatar).data if t.client_avatar else None,
-            "quote": t.quote,
+            "quote": t.safe_translation_getter("quote", language_code=lang) or "",
             "rating": t.rating,
             "is_featured": instance.is_featured,
             "order": instance.order,
@@ -133,13 +168,21 @@ class ServiceTestimonialItemSerializer(serializers.Serializer):
 
 class ServiceDocumentSerializer(serializers.Serializer):
     id            = serializers.UUIDField()
-    title         = serializers.CharField()
-    description   = serializers.CharField(allow_blank=True)
+    title         = serializers.SerializerMethodField()
+    description   = serializers.SerializerMethodField()
     file          = MediaAssetSerializer(allow_null=True)
     document_type = serializers.CharField()
     document_type_display = serializers.SerializerMethodField()
     is_public     = serializers.BooleanField()
     order         = serializers.IntegerField()
+
+    def get_title(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("title", language_code=lang) or ""
+
+    def get_description(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("description", language_code=lang) or ""
 
     def get_document_type_display(self, obj):
         return obj.get_document_type_display()
@@ -147,11 +190,23 @@ class ServiceDocumentSerializer(serializers.Serializer):
 
 class ServiceSLASerializer(serializers.Serializer):
     id             = serializers.UUIDField()
-    guarantee_name = serializers.CharField()
-    value          = serializers.CharField()
-    description    = serializers.CharField(allow_blank=True)
+    guarantee_name = serializers.SerializerMethodField()
+    value          = serializers.SerializerMethodField()
+    description    = serializers.SerializerMethodField()
     icon           = serializers.CharField(allow_blank=True)
     order          = serializers.IntegerField()
+
+    def get_guarantee_name(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("guarantee_name", language_code=lang) or ""
+
+    def get_value(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("value", language_code=lang) or ""
+
+    def get_description(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("description", language_code=lang) or ""
 
 
 # ──────────────────────────────────────────────────────────────────────────────

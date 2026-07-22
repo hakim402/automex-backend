@@ -29,8 +29,13 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
-from parler.admin import TranslatableAdmin
+from parler.admin import TranslatableAdmin, TranslatableInlineModelAdmin
 from unfold.admin import ModelAdmin, TabularInline
+
+
+class UnfoldTranslatableTabularInline(TranslatableInlineModelAdmin, TabularInline):
+    """Unfold-themed TabularInline that supports parler translated fields."""
+    pass
 from unfold.contrib.filters.admin import ChoicesDropdownFilter, RangeDateFilter, RelatedDropdownFilter
 from unfold.decorators import display
 
@@ -111,29 +116,39 @@ SEO_FIELDSET = (
 
 
 @admin.register(ServiceCategory)
-class ServiceCategoryAdmin(ActiveToggleAdminMixin, ModelAdmin):
+class ServiceCategoryAdmin(ActiveToggleAdminMixin, TranslatableAdmin, ModelAdmin):
     list_display = ["name", "slug", "icon", "display_active", "order"]
     list_filter = ["is_active"]
-    search_fields = ["name", "slug"]
-    prepopulated_fields = {"slug": ("name",)}
+    search_fields = ["translations__name", "slug"]
     readonly_fields = ["id"]
     actions = ["action_activate", "action_deactivate"]
-    ordering = ["order", "name"]
+    ordering = ["order"]
     list_filter_submit = True
     warn_unsaved_form = True
+
+    def get_prepopulated_fields(self, request, obj=None):
+        return {"slug": ("name",)}
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("translations")
 
 
 @admin.register(Technology)
-class TechnologyAdmin(ActiveToggleAdminMixin, ModelAdmin):
+class TechnologyAdmin(ActiveToggleAdminMixin, TranslatableAdmin, ModelAdmin):
     list_display = ["name", "category", "display_active", "order"]
     list_filter = [("category", ChoicesDropdownFilter), "is_active"]
-    search_fields = ["name", "slug"]
-    prepopulated_fields = {"slug": ("name",)}
+    search_fields = ["translations__name", "slug"]
     readonly_fields = ["id"]
     actions = ["action_activate", "action_deactivate"]
-    ordering = ["category", "order", "name"]
+    ordering = ["category", "order"]
     list_filter_submit = True
     warn_unsaved_form = True
+
+    def get_prepopulated_fields(self, request, obj=None):
+        return {"slug": ("name",)}
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("translations")
 
 
 @admin.register(Industry)
@@ -187,11 +202,11 @@ class FAQAdmin(ActiveToggleAdminMixin, TranslatableAdmin, ModelAdmin):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-class ServiceHeroImageInline(TabularInline):
+class ServiceHeroImageInline(UnfoldTranslatableTabularInline):
     model = ServiceHeroImage
     extra = 1
     tab = True
-    fields = ["image", "caption", "is_cover", "order"]
+    fields = ["image", "title", "caption", "is_cover", "order"]
     autocomplete_fields = ["image"]
 
 
@@ -203,28 +218,28 @@ class ServiceProcessStepInline(TabularInline):
     autocomplete_fields = ["process_step"]
 
 
-class ServiceDeliverableInline(TabularInline):
+class ServiceDeliverableInline(UnfoldTranslatableTabularInline):
     model = ServiceDeliverable
     extra = 1
     tab = True
     fields = ["title", "description", "icon", "order"]
 
 
-class ServiceAddOnInline(TabularInline):
+class ServiceAddOnInline(UnfoldTranslatableTabularInline):
     model = ServiceAddOn
     extra = 1
     tab = True
     fields = ["name", "description", "price", "is_included_in_enterprise", "order"]
 
 
-class ServiceComparisonRowInline(TabularInline):
+class ServiceComparisonRowInline(UnfoldTranslatableTabularInline):
     model = ServiceComparisonRow
     extra = 1
     tab = True
     fields = ["feature_name", "standard_value", "premium_value", "enterprise_value", "is_highlighted", "order"]
 
 
-class ServiceClientLogoInline(TabularInline):
+class ServiceClientLogoInline(UnfoldTranslatableTabularInline):
     model = ServiceClientLogo
     extra = 1
     tab = True
@@ -240,7 +255,7 @@ class ServiceTestimonialInline(TabularInline):
     autocomplete_fields = ["testimonial"]
 
 
-class ServiceDocumentInline(TabularInline):
+class ServiceDocumentInline(UnfoldTranslatableTabularInline):
     model = ServiceDocument
     extra = 1
     tab = True
@@ -248,7 +263,7 @@ class ServiceDocumentInline(TabularInline):
     autocomplete_fields = ["file"]
 
 
-class ServiceSLAInline(TabularInline):
+class ServiceSLAInline(UnfoldTranslatableTabularInline):
     model = ServiceSLA
     extra = 1
     tab = True
@@ -346,7 +361,7 @@ class ServiceAdmin(TranslatableAdmin, PublishableAdminMixin, ModelAdmin):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-class CaseStudyGalleryImageInline(TabularInline):
+class CaseStudyGalleryImageInline(UnfoldTranslatableTabularInline):
     model = CaseStudyGalleryImage
     extra = 0
     tab = True
@@ -432,39 +447,54 @@ class CaseStudyAdmin(TranslatableAdmin, PublishableAdminMixin, ModelAdmin):
 
 
 @admin.register(BlogCategory)
-class BlogCategoryAdmin(ActiveToggleAdminMixin, ModelAdmin):
+class BlogCategoryAdmin(ActiveToggleAdminMixin, TranslatableAdmin, ModelAdmin):
     list_display = ["name", "slug", "display_active", "order"]
     list_filter = ["is_active"]
-    search_fields = ["name", "slug"]
-    prepopulated_fields = {"slug": ("name",)}
+    search_fields = ["translations__name", "slug"]
     readonly_fields = ["id"]
     actions = ["action_activate", "action_deactivate"]
-    ordering = ["order", "name"]
+    ordering = ["order"]
     list_filter_submit = True
     warn_unsaved_form = True
+
+    def get_prepopulated_fields(self, request, obj=None):
+        return {"slug": ("name",)}
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("translations")
 
 
 @admin.register(BlogTag)
-class BlogTagAdmin(ModelAdmin):
+class BlogTagAdmin(TranslatableAdmin, ModelAdmin):
     list_display = ["name", "slug"]
-    search_fields = ["name", "slug"]
-    prepopulated_fields = {"slug": ("name",)}
+    search_fields = ["translations__name", "slug"]
     readonly_fields = ["id"]
     warn_unsaved_form = True
 
+    def get_prepopulated_fields(self, request, obj=None):
+        return {"slug": ("name",)}
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("translations")
+
 
 @admin.register(BlogAuthor)
-class BlogAuthorAdmin(ActiveToggleAdminMixin, ModelAdmin):
+class BlogAuthorAdmin(ActiveToggleAdminMixin, TranslatableAdmin, ModelAdmin):
     list_display = ["full_name", "role_title", "email", "is_active"]
     list_filter = ["is_active"]
-    search_fields = ["full_name", "role_title", "email"]
-    prepopulated_fields = {"slug": ("full_name",)}
+    search_fields = ["translations__full_name", "translations__role_title", "email"]
     autocomplete_fields = ["avatar"]
     readonly_fields = ["id", "created_at", "updated_at"]
     actions = ["action_activate", "action_deactivate"]
-    ordering = ["full_name"]
+    ordering = ["slug"]
     list_filter_submit = True
     warn_unsaved_form = True
+
+    def get_prepopulated_fields(self, request, obj=None):
+        return {"slug": ("full_name",)}
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("translations")
 
     fieldsets = (
         (
@@ -493,7 +523,7 @@ class BlogAuthorAdmin(ActiveToggleAdminMixin, ModelAdmin):
     )
 
 
-class BlogHeroImageInline(TabularInline):
+class BlogHeroImageInline(UnfoldTranslatableTabularInline):
     model = BlogHeroImage
     extra = 1
     autocomplete_fields = ["image"]
@@ -578,18 +608,23 @@ class BlogPostAdmin(TranslatableAdmin, PublishableAdminMixin, ModelAdmin):
 
 
 @admin.register(TeamMember)
-class TeamMemberAdmin(ActiveToggleAdminMixin, ModelAdmin):
+class TeamMemberAdmin(ActiveToggleAdminMixin, TranslatableAdmin, ModelAdmin):
     list_display = ["display_header", "role_title", "department", "is_leadership", "display_active", "order"]
     list_filter = [("department", ChoicesDropdownFilter), "is_leadership", "is_active"]
-    search_fields = ["full_name", "role_title", "email"]
-    prepopulated_fields = {"slug": ("full_name",)}
+    search_fields = ["translations__full_name", "translations__role_title", "email"]
     autocomplete_fields = ["user", "photo"]
     filter_horizontal = ["projects_showcase"]
     readonly_fields = ["id", "created_at", "updated_at"]
     actions = ["action_activate", "action_deactivate"]
-    ordering = ["order", "full_name"]
+    ordering = ["order"]
     list_filter_submit = True
     warn_unsaved_form = True
+
+    def get_prepopulated_fields(self, request, obj=None):
+        return {"slug": ("full_name",)}
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("translations")
 
     fieldsets = (
         (
@@ -639,7 +674,7 @@ class TeamMemberAdmin(ActiveToggleAdminMixin, ModelAdmin):
 
 
 @admin.register(Testimonial)
-class TestimonialAdmin(ModelAdmin):
+class TestimonialAdmin(TranslatableAdmin, ModelAdmin):
     list_display = [
         "client_name",
         "client_company",
@@ -650,13 +685,16 @@ class TestimonialAdmin(ModelAdmin):
         "order",
     ]
     list_filter = [("source", ChoicesDropdownFilter), "is_featured", "is_published"]
-    search_fields = ["client_name", "client_company", "quote"]
+    search_fields = ["translations__client_name", "translations__client_company", "translations__quote"]
     autocomplete_fields = ["client_avatar", "client_industry", "related_case_study", "related_service"]
     readonly_fields = ["id", "created_at", "updated_at"]
     actions = ["action_feature", "action_unfeature", "action_publish", "action_unpublish"]
     ordering = ["order", "-created_at"]
     list_filter_submit = True
     warn_unsaved_form = True
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("translations")
 
     fieldsets = (
         (
@@ -720,7 +758,7 @@ class TestimonialAdmin(ModelAdmin):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-class PortfolioGalleryImageInline(TabularInline):
+class PortfolioGalleryImageInline(UnfoldTranslatableTabularInline):
     model = PortfolioGalleryImage
     extra = 1
     autocomplete_fields = ["image"]
@@ -728,11 +766,10 @@ class PortfolioGalleryImageInline(TabularInline):
 
 
 @admin.register(PortfolioProject)
-class PortfolioProjectAdmin(ActiveToggleAdminMixin, ModelAdmin):
+class PortfolioProjectAdmin(ActiveToggleAdminMixin, TranslatableAdmin, ModelAdmin):
     list_display = ["title", "client_name", "industry", "is_featured", "is_published", "completion_year", "order"]
     list_filter = ["is_featured", "is_published", ("industry", RelatedDropdownFilter)]
-    search_fields = ["title", "client_name", "short_description"]
-    prepopulated_fields = {"slug": ("title",)}
+    search_fields = ["translations__title", "translations__client_name", "translations__short_description"]
     autocomplete_fields = ["cover_image", "industry"]
     filter_horizontal = ["services", "technologies"]
     inlines = [PortfolioGalleryImageInline]
@@ -741,6 +778,12 @@ class PortfolioProjectAdmin(ActiveToggleAdminMixin, ModelAdmin):
     ordering = ["order", "-created_at"]
     list_filter_submit = True
     warn_unsaved_form = True
+
+    def get_prepopulated_fields(self, request, obj=None):
+        return {"slug": ("title",)}
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("translations")
 
     fieldsets = (
         (_("Project"), {"fields": ("id", "title", "slug", "short_description", "cover_image"), "classes": ["tab"],
@@ -762,18 +805,23 @@ class PortfolioProjectAdmin(ActiveToggleAdminMixin, ModelAdmin):
 
 
 @admin.register(AICapability)
-class AICapabilityAdmin(ActiveToggleAdminMixin, ModelAdmin):
+class AICapabilityAdmin(ActiveToggleAdminMixin, TranslatableAdmin, ModelAdmin):
     list_display = ["name", "category", "maturity_level", "is_active", "order"]
     list_filter = ["is_active", ("category", ChoicesDropdownFilter), ("maturity_level", ChoicesDropdownFilter)]
-    search_fields = ["name", "description"]
-    prepopulated_fields = {"slug": ("name",)}
+    search_fields = ["translations__name", "translations__description"]
     autocomplete_fields = ["cover_image"]
     filter_horizontal = ["related_services", "technologies"]
     readonly_fields = ["id", "created_at", "updated_at"]
     actions = ["action_activate", "action_deactivate"]
-    ordering = ["order", "name"]
+    ordering = ["order"]
     list_filter_submit = True
     warn_unsaved_form = True
+
+    def get_prepopulated_fields(self, request, obj=None):
+        return {"slug": ("name",)}
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("translations")
 
     fieldsets = (
         (_("Capability"), {"fields": ("id", "name", "slug", "description", "category", "maturity_level"), "classes": ["tab"],
@@ -793,17 +841,22 @@ class AICapabilityAdmin(ActiveToggleAdminMixin, ModelAdmin):
 
 
 @admin.register(TechExpertiseArea)
-class TechExpertiseAreaAdmin(ActiveToggleAdminMixin, ModelAdmin):
+class TechExpertiseAreaAdmin(ActiveToggleAdminMixin, TranslatableAdmin, ModelAdmin):
     list_display = ["name", "category", "is_active", "order"]
     list_filter = ["is_active", ("category", ChoicesDropdownFilter)]
-    search_fields = ["name", "description"]
-    prepopulated_fields = {"slug": ("name",)}
+    search_fields = ["translations__name", "translations__description"]
     filter_horizontal = ["technologies", "case_studies"]
     readonly_fields = ["id", "created_at", "updated_at"]
     actions = ["action_activate", "action_deactivate"]
-    ordering = ["order", "name"]
+    ordering = ["order"]
     list_filter_submit = True
     warn_unsaved_form = True
+
+    def get_prepopulated_fields(self, request, obj=None):
+        return {"slug": ("name",)}
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("translations")
 
     fieldsets = (
         (_("Expertise Area"), {"fields": ("id", "name", "slug", "description", "icon", "category"), "classes": ["tab"],
@@ -826,17 +879,22 @@ class TechExpertiseAreaAdmin(ActiveToggleAdminMixin, ModelAdmin):
 
 
 @admin.register(Partner)
-class PartnerAdmin(ActiveToggleAdminMixin, ModelAdmin):
+class PartnerAdmin(ActiveToggleAdminMixin, TranslatableAdmin, ModelAdmin):
     list_display = ["name", "partner_type", "tier", "is_active", "order"]
     list_filter = ["is_active", ("partner_type", ChoicesDropdownFilter), ("tier", ChoicesDropdownFilter)]
-    search_fields = ["name", "description"]
-    prepopulated_fields = {"slug": ("name",)}
+    search_fields = ["translations__name", "translations__description"]
     autocomplete_fields = ["logo"]
     readonly_fields = ["id", "created_at", "updated_at"]
     actions = ["action_activate", "action_deactivate"]
-    ordering = ["order", "name"]
+    ordering = ["order"]
     list_filter_submit = True
     warn_unsaved_form = True
+
+    def get_prepopulated_fields(self, request, obj=None):
+        return {"slug": ("name",)}
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("translations")
 
     fieldsets = (
         (_("Partner"), {"fields": ("id", "name", "slug", "logo", "website_url", "description"), "classes": ["tab"],
@@ -854,17 +912,20 @@ class PartnerAdmin(ActiveToggleAdminMixin, ModelAdmin):
 
 
 @admin.register(Certification)
-class CertificationAdmin(ActiveToggleAdminMixin, ModelAdmin):
+class CertificationAdmin(ActiveToggleAdminMixin, TranslatableAdmin, ModelAdmin):
     list_display = ["name", "issuer", "is_active", "order"]
     list_filter = ["is_active"]
-    search_fields = ["name", "issuer", "credential_id"]
+    search_fields = ["translations__name", "translations__issuer", "credential_id"]
     autocomplete_fields = ["badge_image"]
     filter_horizontal = ["related_services"]
     readonly_fields = ["id", "created_at", "updated_at"]
     actions = ["action_activate", "action_deactivate"]
-    ordering = ["order", "name"]
+    ordering = ["order"]
     list_filter_submit = True
     warn_unsaved_form = True
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("translations")
 
     fieldsets = (
         (_("Certification"), {"fields": ("id", "name", "issuer", "badge_image"), "classes": ["tab"],
@@ -889,10 +950,10 @@ class CertificationAdmin(ActiveToggleAdminMixin, ModelAdmin):
 
 
 @admin.register(ServiceHeroImage)
-class ServiceHeroImageAdmin(ModelAdmin):
-    list_display = ["service", "caption", "is_cover", "order"]
+class ServiceHeroImageAdmin(TranslatableAdmin, ModelAdmin):
+    list_display = ["service", "title", "caption", "is_cover", "order"]
     list_filter = ["is_cover"]
-    search_fields = ["service__translations__name", "caption"]
+    search_fields = ["service__translations__name", "translations__title", "translations__caption"]
     autocomplete_fields = ["service", "image"]
     readonly_fields = ["id"]
     ordering = ["service", "order"]
@@ -900,9 +961,12 @@ class ServiceHeroImageAdmin(ModelAdmin):
     compressed_fields = True
     warn_unsaved_form = True
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("service").prefetch_related("translations")
+
     fieldsets = (
-        (_("Hero Image"), {"fields": ("id", "service", "image", "caption"), "classes": ["tab"],
-         "description": _("Add one or more hero images per service. Mark one as cover for the main banner.")}),
+        (_("Hero Image"), {"fields": ("id", "service", "image", "title", "caption"), "classes": ["tab"],
+         "description": _("Translatable fields. Use the language tabs above to enter content for each supported language. Mark one as cover for the main banner.")}),
         (_("Display"), {"fields": ("is_cover", "order"), "classes": ["tab"],
          "description": _("Cover image is used as the main hero banner. Order controls the carousel sequence.")}),
     )
@@ -929,28 +993,31 @@ class ServiceProcessStepAdmin(ModelAdmin):
 
 
 @admin.register(ServiceDeliverable)
-class ServiceDeliverableAdmin(ModelAdmin):
+class ServiceDeliverableAdmin(TranslatableAdmin, ModelAdmin):
     list_display = ["service", "title", "icon", "order"]
-    search_fields = ["service__translations__name", "title"]
+    search_fields = ["service__translations__name", "translations__title", "translations__description"]
     autocomplete_fields = ["service"]
     readonly_fields = ["id"]
     ordering = ["service", "order"]
     compressed_fields = True
     warn_unsaved_form = True
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("service").prefetch_related("translations")
+
     fieldsets = (
         (_("Deliverable"), {"fields": ("id", "service", "title", "description", "icon"), "classes": ["tab"],
-         "description": _("A tangible output the client receives from this service. Icon is shown next to the title.")}),
+         "description": _("Translatable fields. Use language tabs for each supported language. A tangible output the client receives from this service. Icon is shown next to the title.")}),
         (_("Display"), {"fields": ("order",), "classes": ["tab"],
          "description": _("Sort order in the deliverables list.")}),
     )
 
 
 @admin.register(ServiceAddOn)
-class ServiceAddOnAdmin(ModelAdmin):
+class ServiceAddOnAdmin(TranslatableAdmin, ModelAdmin):
     list_display = ["service", "name", "price", "is_included_in_enterprise", "order"]
     list_filter = ["is_included_in_enterprise"]
-    search_fields = ["service__translations__name", "name"]
+    search_fields = ["service__translations__name", "translations__name", "translations__description"]
     autocomplete_fields = ["service"]
     readonly_fields = ["id"]
     ordering = ["service", "order"]
@@ -958,19 +1025,22 @@ class ServiceAddOnAdmin(ModelAdmin):
     compressed_fields = True
     warn_unsaved_form = True
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("service").prefetch_related("translations")
+
     fieldsets = (
         (_("Add-On"), {"fields": ("id", "service", "name", "description", "price"), "classes": ["tab"],
-         "description": _("Optional upgrade or add-on offered alongside this service. Price is displayed on the service page.")}),
+         "description": _("Translatable fields. Use language tabs for each supported language. Optional upgrade or add-on offered alongside this service. Price is displayed on the service page.")}),
         (_("Display"), {"fields": ("is_included_in_enterprise", "order"), "classes": ["tab"],
          "description": _("If included in enterprise, this add-on shows as bundled in the enterprise tier.")}),
     )
 
 
 @admin.register(ServiceComparisonRow)
-class ServiceComparisonRowAdmin(ModelAdmin):
+class ServiceComparisonRowAdmin(TranslatableAdmin, ModelAdmin):
     list_display = ["service", "feature_name", "standard_value", "premium_value", "enterprise_value", "is_highlighted", "order"]
     list_filter = ["is_highlighted"]
-    search_fields = ["service__translations__name", "feature_name"]
+    search_fields = ["service__translations__name", "translations__feature_name"]
     autocomplete_fields = ["service"]
     readonly_fields = ["id"]
     ordering = ["service", "order"]
@@ -978,9 +1048,12 @@ class ServiceComparisonRowAdmin(ModelAdmin):
     compressed_fields = True
     warn_unsaved_form = True
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("service").prefetch_related("translations")
+
     fieldsets = (
         (_("Comparison Row"), {"fields": ("id", "service", "feature_name"), "classes": ["tab"],
-         "description": _("A feature row in the tier comparison table. Each row compares Standard vs Premium vs Enterprise.")}),
+         "description": _("Translatable feature name. A feature row in the tier comparison table. Each row compares Standard vs Premium vs Enterprise.")}),
         (_("Values"), {"fields": ("standard_value", "premium_value", "enterprise_value"), "classes": ["tab"],
          "description": _("What each tier offers for this feature (e.g. '✓', 'Unlimited', 'Contact us').")}),
         (_("Display"), {"fields": ("is_highlighted", "order"), "classes": ["tab"],
@@ -989,18 +1062,21 @@ class ServiceComparisonRowAdmin(ModelAdmin):
 
 
 @admin.register(ServiceClientLogo)
-class ServiceClientLogoAdmin(ModelAdmin):
+class ServiceClientLogoAdmin(TranslatableAdmin, ModelAdmin):
     list_display = ["service", "client_name", "order"]
-    search_fields = ["service__translations__name", "client_name"]
+    search_fields = ["service__translations__name", "translations__client_name"]
     autocomplete_fields = ["service", "logo"]
     readonly_fields = ["id"]
     ordering = ["service", "order"]
     compressed_fields = True
     warn_unsaved_form = True
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("service").prefetch_related("translations")
+
     fieldsets = (
         (_("Client Logo"), {"fields": ("id", "service", "logo", "client_name", "client_url"), "classes": ["tab"],
-         "description": _("A client logo displayed in the service page logo carousel or trust bar.")}),
+         "description": _("Translatable client name. A client logo displayed in the service page logo carousel or trust bar.")}),
         (_("Display"), {"fields": ("order",), "classes": ["tab"],
          "description": _("Sort order in the logo carousel.")}),
     )
@@ -1027,10 +1103,10 @@ class ServiceTestimonialAdmin(ModelAdmin):
 
 
 @admin.register(ServiceDocument)
-class ServiceDocumentAdmin(ModelAdmin):
+class ServiceDocumentAdmin(TranslatableAdmin, ModelAdmin):
     list_display = ["service", "title", "document_type", "is_public", "order"]
     list_filter = [("document_type", ChoicesDropdownFilter), "is_public"]
-    search_fields = ["service__translations__name", "title"]
+    search_fields = ["service__translations__name", "translations__title", "translations__description"]
     autocomplete_fields = ["service", "file"]
     readonly_fields = ["id"]
     ordering = ["service", "order"]
@@ -1038,9 +1114,13 @@ class ServiceDocumentAdmin(ModelAdmin):
     compressed_fields = True
     warn_unsaved_form = True
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("service").prefetch_related("translations")
+
     fieldsets = (
         (_("Document"), {"fields": ("id", "service", "title", "description", "file", "document_type"), "classes": ["tab"],
          "description": _(
+             "Translatable fields. Use language tabs for each supported language. "
              "Upload a downloadable document (brochure, datasheet, case study PDF). "
              "Document type controls the icon and grouping on the service page."
          )}),
@@ -1050,18 +1130,22 @@ class ServiceDocumentAdmin(ModelAdmin):
 
 
 @admin.register(ServiceSLA)
-class ServiceSLAAdmin(ModelAdmin):
+class ServiceSLAAdmin(TranslatableAdmin, ModelAdmin):
     list_display = ["service", "guarantee_name", "value", "icon", "order"]
-    search_fields = ["service__translations__name", "guarantee_name"]
+    search_fields = ["service__translations__name", "translations__guarantee_name", "translations__value", "translations__description"]
     autocomplete_fields = ["service"]
     readonly_fields = ["id"]
     ordering = ["service", "order"]
     compressed_fields = True
     warn_unsaved_form = True
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("service").prefetch_related("translations")
+
     fieldsets = (
         (_("SLA"), {"fields": ("id", "service", "guarantee_name", "value", "description", "icon"), "classes": ["tab"],
          "description": _(
+             "Translatable fields. Use language tabs for each supported language. "
              "A service-level guarantee (e.g. '99.9% Uptime', '24h Response'). "
              "Value is the metric, description explains the guarantee terms."
          )}),

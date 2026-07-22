@@ -15,8 +15,12 @@ from .taxonomy import IndustrySerializer, TechnologySerializer
 class CaseStudyGalleryImageSerializer(serializers.Serializer):
     id      = serializers.UUIDField()
     media   = MediaAssetSerializer()
-    caption = serializers.CharField()
+    caption = serializers.SerializerMethodField()
     order   = serializers.IntegerField()
+
+    def get_caption(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("caption", language_code=lang) or ""
 
 
 class CaseStudyListSerializer(serializers.ModelSerializer):

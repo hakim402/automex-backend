@@ -13,6 +13,8 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from parler.models import TranslatableModel, TranslatedFields
+
 from apps.core.models import TimeStampedModel, UUIDModel
 
 
@@ -90,11 +92,13 @@ class AIMessage(UUIDModel):
         return f"{self.get_role_display()}: {self.content[:50]}"
 
 
-class AIKnowledgeEntry(UUIDModel, TimeStampedModel):
+class AIKnowledgeEntry(TranslatableModel, UUIDModel, TimeStampedModel):
     """Curated Q&A pairs used to ground the assistant's answers about AUTOMEX."""
 
-    question = models.CharField(_("question"), max_length=500)
-    answer   = models.TextField(_("answer"))
+    translations = TranslatedFields(
+        question = models.CharField(_("question"), max_length=500),
+        answer   = models.TextField(_("answer")),
+    )
     category = models.CharField(_("category"), max_length=100, blank=True)
 
     related_service = models.ForeignKey(
@@ -105,9 +109,9 @@ class AIKnowledgeEntry(UUIDModel, TimeStampedModel):
     is_active = models.BooleanField(_("active"), default=True, db_index=True)
 
     class Meta:
-        ordering            = ["category", "question"]
+        ordering            = ["category"]
         verbose_name        = _("AI knowledge entry")
         verbose_name_plural = _("AI knowledge entries")
 
     def __str__(self) -> str:
-        return self.question
+        return self.safe_translation_getter("question", any_language=True) or str(self.id)

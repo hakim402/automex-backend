@@ -28,12 +28,24 @@ class BlogAuthorSerializer(serializers.Serializer):
 
     id         = serializers.UUIDField()
     full_name  = serializers.SerializerMethodField()
+    bio        = serializers.SerializerMethodField()
+    role_title = serializers.SerializerMethodField()
+    slug       = serializers.CharField()
+    avatar     = MediaAssetSerializer(allow_null=True)
+    linkedin_url = serializers.CharField(allow_blank=True)
+    github_url   = serializers.CharField(allow_blank=True)
 
-    def get_full_name(self, obj) -> str:
-        first = getattr(obj, "first_name", "") or ""
-        last  = getattr(obj, "last_name", "") or ""
-        full  = f"{first} {last}".strip()
-        return full or getattr(obj, "email", "")
+    def get_full_name(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("full_name", language_code=lang) or ""
+
+    def get_bio(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("bio", language_code=lang) or ""
+
+    def get_role_title(self, obj):
+        lang = self.context.get("language_code", "en")
+        return obj.safe_translation_getter("role_title", language_code=lang) or ""
 
 
 class BlogPostListSerializer(serializers.ModelSerializer):

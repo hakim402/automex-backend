@@ -9,6 +9,8 @@ from __future__ import annotations
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from parler.models import TranslatableModel, TranslatedFields
+
 from apps.core.models import OrderableModel, TimeStampedModel, UUIDModel
 
 from .case_studies import CaseStudy
@@ -16,7 +18,7 @@ from .services import Service
 from .taxonomy import Industry
 
 
-class Testimonial(UUIDModel, TimeStampedModel, OrderableModel):
+class Testimonial(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
     class Source(models.TextChoices):
         MANUAL     = "manual",     _("Manual")
         CLUTCH     = "clutch",     _("Clutch")
@@ -24,16 +26,18 @@ class Testimonial(UUIDModel, TimeStampedModel, OrderableModel):
         LINKEDIN   = "linkedin",   _("LinkedIn")
         TRUSTPILOT = "trustpilot", _("Trustpilot")
 
-    client_name    = models.CharField(_("client name"), max_length=200)
-    client_role    = models.CharField(_("client role"), max_length=200, blank=True)
-    client_company = models.CharField(_("client company"), max_length=200, blank=True)
+    translations = TranslatedFields(
+        client_name    = models.CharField(_("client name"), max_length=200),
+        client_role    = models.CharField(_("client role"), max_length=200, blank=True),
+        client_company = models.CharField(_("client company"), max_length=200, blank=True),
+        quote          = models.TextField(_("quote")),
+    )
     client_avatar  = models.ForeignKey(
         "core.MediaAsset",
         on_delete=models.SET_NULL, null=True, blank=True,
         related_name="+", verbose_name=_("client avatar"),
     )
 
-    quote  = models.TextField(_("quote"))
     rating = models.PositiveSmallIntegerField(_("rating"), default=5, help_text=_("1 to 5 stars."))
 
     source     = models.CharField(_("source"), max_length=20, choices=Source.choices, default=Source.MANUAL)
@@ -85,4 +89,6 @@ class Testimonial(UUIDModel, TimeStampedModel, OrderableModel):
         ]
 
     def __str__(self) -> str:
-        return f"{self.client_name} — {self.client_company or 'N/A'}"
+        name = self.safe_translation_getter("client_name", any_language=True) or "Unknown"
+        company = self.safe_translation_getter("client_company", any_language=True) or "N/A"
+        return f"{name} — {company}"

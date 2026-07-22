@@ -11,6 +11,7 @@ from django.contrib import admin
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from parler.admin import TranslatableAdmin
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.contrib.filters.admin import ChoicesDropdownFilter, RangeDateFilter, RelatedDropdownFilter
 from unfold.decorators import display
@@ -116,16 +117,19 @@ class AIConversationAdmin(ModelAdmin):
 
 
 @admin.register(AIKnowledgeEntry)
-class AIKnowledgeEntryAdmin(ActiveToggleAdminMixin, ModelAdmin):
+class AIKnowledgeEntryAdmin(ActiveToggleAdminMixin, TranslatableAdmin, ModelAdmin):
     list_display = ["question", "category", "related_service", "display_active"]
     list_filter = ["category", ("related_service", RelatedDropdownFilter), "is_active"]
-    search_fields = ["question", "answer", "category"]
+    search_fields = ["translations__question", "translations__answer", "category"]
     autocomplete_fields = ["related_service"]
     readonly_fields = ["id", "created_at", "updated_at"]
     actions = ["action_activate", "action_deactivate"]
-    ordering = ["category", "question"]
+    ordering = ["category"]
     list_filter_submit = True
     warn_unsaved_form = True
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("translations")
 
     fieldsets = (
         (_("Q&A"), {"fields": ("id", "question", "answer", "category"), "classes": ["tab"],

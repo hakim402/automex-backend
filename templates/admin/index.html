@@ -1,4 +1,3 @@
-
 {% extends 'unfold/layouts/base_simple.html' %}
 {% load i18n unfold %}
 
@@ -17,248 +16,182 @@
 {% block content %}
 {% component "unfold/components/container.html" %}
 
-    {# ── Welcome bar with environment badge ───────────────────────── #}
-    {% component "unfold/components/flex.html" with class="gap-4 mb-8 items-center justify-between" %}
-        <div>
-            {% component "unfold/components/title.html" %}
-                {% trans "Welcome back" %}{% if user.full_name %}, {{ user.full_name }}{% endif %}
+    {# ── Welcome bar ──────────────────────────────────────────────── #}
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900 flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-outlined text-primary-600 dark:text-primary-400 text-xl">waving_hand</span>
+            </div>
+            <div>
+                <h2 class="text-lg font-semibold text-font-important-light dark:text-font-important-dark">
+                    {% trans "Welcome back" %}{% if user.full_name %}, <span class="text-primary-600 dark:text-primary-400">{{ user.full_name }}</span>{% endif %}
+                </h2>
+                <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark mt-0.5">
+                    {% now "l, F j, Y" %} · {{ user.email }}
+                </p>
+            </div>
+        </div>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide uppercase border {{ env_css_class }}">
+            <span class="w-2 h-2 rounded-full {% if env_label == 'PRODUCTION' %}bg-green-500{% else %}bg-amber-500{% endif %}"></span>
+            {{ env_label }}
+        </span>
+    </div>
+
+    {# ── 6 KPI Cards (3 per row → 2 tablet → 1 mobile) ──────────── #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {% for card in kpi_cards %}
+            {% component "unfold/components/card.html" with title=card.title %}
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        {% component "unfold/components/title.html" %}
+                            {{ card.metric }}
+                        {% endcomponent %}
+                        {% component "unfold/components/text.html" %}
+                            {{ card.footer }}
+                        {% endcomponent %}
+                    </div>
+                    <span class="material-symbols-outlined text-3xl text-primary-400 dark:text-primary-500 flex-shrink-0 mt-0.5">{{ card.icon }}</span>
+                </div>
             {% endcomponent %}
-            {% component "unfold/components/text.html" with class="text-font-subtle-light dark:text-font-subtle-dark mt-1" %}
-                {% now "l, F j, Y" %} · {{ user.email }}
+        {% endfor %}
+    </div>
+
+    {# ── Charts Row 1 — Signups (2/3) + Roles (1/3) ─────────────── #}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <div class="lg:col-span-2">
+            {% component "unfold/components/card.html" with title=_("New Signups — Last 14 Days") %}
+                {% component "unfold/components/chart/line.html" with data=signup_chart_data height="280" %}{% endcomponent %}
             {% endcomponent %}
         </div>
-        <span class="env-badge {{ env_css_class }}">{{ env_label }}</span>
-    {% endcomponent %}
-
-    {# ── KPI cards — responsive grid (1→2→3→4 columns) ────────────── #}
-    {% component "unfold/components/flex.html" with class="gap-4 mb-8 flex-row flex-wrap" %}
-        {% for card in kpi_cards %}
-            {% with card_class="w-full sm:w-1/2 lg:w-1/3 xl:w-1/4"|add:" "|add:card.css_class|default:"" %}
-            {% component "unfold/components/card.html" with class=card_class %}
-                {% component "unfold/components/text.html" %}
-                    {{ card.title }}
-                {% endcomponent %}
-                {% component "unfold/components/title.html" %}
-                    {{ card.metric }}
-                {% endcomponent %}
-                {% component "unfold/components/text.html" with class="text-font-subtle-light dark:text-font-subtle-dark" %}
-                    {{ card.footer }}
-                {% endcomponent %}
+        <div>
+            {% component "unfold/components/card.html" with title=_("Users by Role") %}
+                <canvas id="roleChart" height="280"></canvas>
             {% endcomponent %}
-            {% endwith %}
-        {% endfor %}
-    {% endcomponent %}
+        </div>
+    </div>
 
-    {# ── System Health Summary ─────────────────────────────────────── #}
-    {% component "unfold/components/flex.html" with class="gap-4 mb-8 flex-col lg:flex-row" %}
-        {% component "unfold/components/card.html" with class="lg:w-full" %}
-            {% component "unfold/components/title.html" %}
-                {% trans "System Health" %}
+    {# ── Charts Row 2 — Lead Status + Source Channel ─────────────── #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <div>
+            {% component "unfold/components/card.html" with title=_("Leads by Status") %}
+                {% component "unfold/components/chart/bar.html" with data=lead_status_chart_data height="280" %}{% endcomponent %}
             {% endcomponent %}
-            <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="text-center p-3 rounded-lg bg-base-50 dark:bg-base-900">
-                    <div class="text-2xl font-bold {% if locked_users > 0 %}text-red-500{% else %}text-green-500{% endif %}">
-                        {{ locked_users }}
-                    </div>
-                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">
-                        {% trans "Locked Accounts" %}
-                    </div>
+        </div>
+        <div>
+            {% component "unfold/components/card.html" with title=_("Leads by Source Channel") %}
+                <canvas id="channelChart" height="280"></canvas>
+            {% endcomponent %}
+        </div>
+    </div>
+
+    {# ── Charts Row 3 — Content Health + Quick Actions ───────────── #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <div>
+            {% component "unfold/components/card.html" with title=_("Published Content Overview") %}
+                {% component "unfold/components/chart/bar.html" with data=content_health_chart_data height="280" %}{% endcomponent %}
+            {% endcomponent %}
+        </div>
+        <div>
+            {% component "unfold/components/card.html" with title=_("Quick Actions") %}
+                <div class="grid grid-cols-2 gap-3">
+                    <a href="{% url 'admin:accounts_user_add' %}"
+                       class="flex items-center gap-2 p-3 rounded-lg bg-base-50 dark:bg-base-950 border border-base-200 dark:border-base-800
+                              hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors text-sm text-font-important-light dark:text-font-important-dark">
+                        <span class="material-symbols-outlined text-primary-500 text-lg">person_add</span>
+                        {% trans "Add User" %}
+                    </a>
+                    <a href="{% url 'admin:content_service_add' %}"
+                       class="flex items-center gap-2 p-3 rounded-lg bg-base-50 dark:bg-base-950 border border-base-200 dark:border-base-800
+                              hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors text-sm text-font-important-light dark:text-font-important-dark">
+                        <span class="material-symbols-outlined text-primary-500 text-lg">post_add</span>
+                        {% trans "New Service" %}
+                    </a>
+                    <a href="{% url 'admin:content_blogpost_add' %}"
+                       class="flex items-center gap-2 p-3 rounded-lg bg-base-50 dark:bg-base-950 border border-base-200 dark:border-base-800
+                              hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors text-sm text-font-important-light dark:text-font-important-dark">
+                        <span class="material-symbols-outlined text-primary-500 text-lg">edit_note</span>
+                        {% trans "New Article" %}
+                    </a>
+                    <a href="{% url 'admin:crm_lead_changelist' %}"
+                       class="flex items-center gap-2 p-3 rounded-lg bg-base-50 dark:bg-base-950 border border-base-200 dark:border-base-800
+                              hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors text-sm text-font-important-light dark:text-font-important-dark">
+                        <span class="material-symbols-outlined text-primary-500 text-lg">person_search</span>
+                        {% trans "View Leads" %}
+                    </a>
+                    <a href="{% url 'admin:content_portfolioproject_add' %}"
+                       class="flex items-center gap-2 p-3 rounded-lg bg-base-50 dark:bg-base-950 border border-base-200 dark:border-base-800
+                              hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors text-sm text-font-important-light dark:text-font-important-dark">
+                        <span class="material-symbols-outlined text-primary-500 text-lg">add_photo_alternate</span>
+                        {% trans "New Portfolio" %}
+                    </a>
+                    <a href="{% url 'admin:assistant_aiknowledgeentry_add' %}"
+                       class="flex items-center gap-2 p-3 rounded-lg bg-base-50 dark:bg-base-950 border border-base-200 dark:border-base-800
+                              hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors text-sm text-font-important-light dark:text-font-important-dark">
+                        <span class="material-symbols-outlined text-primary-500 text-lg">psychology</span>
+                        {% trans "Add Knowledge" %}
+                    </a>
                 </div>
-                <div class="text-center p-3 rounded-lg bg-base-50 dark:bg-base-900">
-                    <div class="text-2xl font-bold {% if failed_notifications > 0 %}text-red-500{% else %}text-green-500{% endif %}">
-                        {{ failed_notifications }}
-                    </div>
-                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">
-                        {% trans "Failed Notifications" %}
-                    </div>
-                </div>
-                <div class="text-center p-3 rounded-lg bg-base-50 dark:bg-base-900">
-                    <div class="text-2xl font-bold {% if unresolved_tickets > 0 %}text-amber-500{% else %}text-green-500{% endif %}">
-                        {{ unresolved_tickets }}
-                    </div>
-                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">
-                        {% trans "Unresolved Tickets" %}
-                    </div>
-                </div>
-                <div class="text-center p-3 rounded-lg bg-base-50 dark:bg-base-900">
-                    <div class="text-2xl font-bold text-indigo-500">
-                        {{ draft_content }}
-                    </div>
-                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">
-                        {% trans "Draft Content" %}
-                    </div>
-                </div>
-            </div>
-        {% endcomponent %}
-    {% endcomponent %}
-
-    {# ── Charts row 1 ─────────────────────────────────────────────── #}
-    {% component "unfold/components/flex.html" with class="gap-4 mb-8 flex-col lg:flex-row" %}
-
-        {% component "unfold/components/card.html" with class="lg:w-2/3" %}
-            {% component "unfold/components/title.html" %}
-                {% trans "New signups — last 14 days" %}
             {% endcomponent %}
-            <div class="mt-4">
-                <canvas id="signupChart" height="90"></canvas>
-            </div>
-        {% endcomponent %}
-
-        {% component "unfold/components/card.html" with class="lg:w-1/3" %}
-            {% component "unfold/components/title.html" %}
-                {% trans "Users by role" %}
-            {% endcomponent %}
-            <div class="mt-4">
-                <canvas id="roleChart" height="90"></canvas>
-            </div>
-        {% endcomponent %}
-
-    {% endcomponent %}
-
-    {# ── Charts row 2 ─────────────────────────────────────────────── #}
-    {% component "unfold/components/flex.html" with class="gap-4 mb-8 flex-col lg:flex-row" %}
-
-        {% component "unfold/components/card.html" with class="lg:w-1/2" %}
-            {% component "unfold/components/title.html" %}
-                {% trans "Leads by status" %}
-            {% endcomponent %}
-            <div class="mt-4">
-                <canvas id="leadStatusChart" height="90"></canvas>
-            </div>
-        {% endcomponent %}
-
-        {% component "unfold/components/card.html" with class="lg:w-1/2" %}
-            {% component "unfold/components/title.html" %}
-                {% trans "Leads by source channel" %}
-            {% endcomponent %}
-            <div class="mt-4">
-                <canvas id="channelChart" height="90"></canvas>
-            </div>
-        {% endcomponent %}
-
-    {% endcomponent %}
-
-    {# ── Tenant tier breakdown table ──────────────────────────────── #}
-    {% component "unfold/components/card.html" with class="mb-8" %}
-        {% component "unfold/components/title.html" %}
-            {% trans "Tenants by subscription tier" %}
-        {% endcomponent %}
-
-        <table class="mt-4 w-full text-sm">
-            <thead>
-                <tr class="text-left text-font-subtle-light dark:text-font-subtle-dark border-b border-base-200 dark:border-base-800">
-                    <th class="py-2">{% trans "Tier" %}</th>
-                    <th class="py-2">{% trans "Tenants" %}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in tenant_tiers %}
-                <tr class="border-b border-base-100 dark:border-base-800">
-                    <td class="py-2 capitalize">{{ row.subscription_tier }}</td>
-                    <td class="py-2">{{ row.count }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% endcomponent %}
+        </div>
+    </div>
 
 {% endcomponent %}
 
-{# ── Chart.js rendering ────────────────────────────────────────────── #}
+{# ── Chart.js — only for doughnut charts (Unfold handles bar/line) ─ #}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        const signupCtx = document.getElementById("signupChart");
-        new Chart(signupCtx, {
-            type: "line",
-            data: {
-                labels: {{ signup_chart_labels|safe }},
-                datasets: [{
-                    label: "{% trans 'Signups' %}",
-                    data: {{ signup_chart_data|safe }},
-                    borderColor: "rgb(99, 102, 241)",
-                    backgroundColor: "rgba(99, 102, 241, 0.1)",
-                    tension: 0.35,
-                    fill: true,
-                }],
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
-            },
-        });
+        const shared = { responsive: true, maintainAspectRatio: false };
 
+        // ── Roles Doughnut ──────────────────────────────────────────
         const roleCtx = document.getElementById("roleChart");
-        new Chart(roleCtx, {
-            type: "doughnut",
-            data: {
-                labels: {{ role_chart_labels|safe }},
-                datasets: [{
-                    data: {{ role_chart_data|safe }},
-                    backgroundColor: [
-                        "rgb(99, 102, 241)",
-                        "rgb(234, 179, 8)",
-                        "rgb(34, 197, 94)",
-                        "rgb(239, 68, 68)",
-                    ],
-                }],
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { position: "bottom" } },
-            },
-        });
+        if (roleCtx) {
+            new Chart(roleCtx, {
+                type: "doughnut",
+                data: {
+                    labels: {{ role_chart_labels|safe }},
+                    datasets: [{
+                        data: {{ role_chart_data|safe }},
+                        backgroundColor: [
+                            "rgb(99, 102, 241)", "rgb(234, 179, 8)",
+                            "rgb(34, 197, 94)", "rgb(239, 68, 68)",
+                        ],
+                        borderWidth: 0,
+                    }],
+                },
+                options: {
+                    ...shared,
+                    plugins: {
+                        legend: { position: "bottom", labels: { padding: 16, usePointStyle: true } },
+                    },
+                },
+            });
+        }
 
-        const leadStatusCtx = document.getElementById("leadStatusChart");
-        new Chart(leadStatusCtx, {
-            type: "bar",
-            data: {
-                labels: {{ lead_status_labels|safe }},
-                datasets: [{
-                    label: "{% trans 'Leads' %}",
-                    data: {{ lead_status_data|safe }},
-                    backgroundColor: [
-                        "rgb(99, 102, 241)",
-                        "rgb(234, 179, 8)",
-                        "rgb(34, 197, 94)",
-                        "rgb(239, 68, 68)",
-                        "rgb(168, 85, 247)",
-                        "rgb(59, 130, 246)",
-                        "rgb(251, 146, 60)",
-                        "rgb(156, 163, 175)",
-                    ],
-                }],
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
-            },
-        });
-
+        // ── Source Channel Doughnut ─────────────────────────────────
         const channelCtx = document.getElementById("channelChart");
-        new Chart(channelCtx, {
-            type: "doughnut",
-            data: {
-                labels: {{ channel_labels|safe }},
-                datasets: [{
-                    data: {{ channel_data|safe }},
-                    backgroundColor: [
-                        "rgb(99, 102, 241)",
-                        "rgb(34, 197, 94)",
-                        "rgb(234, 179, 8)",
-                        "rgb(239, 68, 68)",
-                        "rgb(168, 85, 247)",
-                        "rgb(59, 130, 246)",
-                    ],
-                }],
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { position: "bottom" } },
-            },
-        });
+        if (channelCtx) {
+            new Chart(channelCtx, {
+                type: "doughnut",
+                data: {
+                    labels: {{ channel_labels|safe }},
+                    datasets: [{
+                        data: {{ channel_data|safe }},
+                        backgroundColor: [
+                            "rgb(99, 102, 241)", "rgb(34, 197, 94)", "rgb(234, 179, 8)",
+                            "rgb(239, 68, 68)", "rgb(168, 85, 247)", "rgb(59, 130, 246)",
+                        ],
+                        borderWidth: 0,
+                    }],
+                },
+                options: {
+                    ...shared,
+                    plugins: {
+                        legend: { position: "bottom", labels: { padding: 16, usePointStyle: true } },
+                    },
+                },
+            });
+        }
     });
 </script>
 {% endblock %}

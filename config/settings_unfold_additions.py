@@ -21,12 +21,12 @@ from django.utils.translation import gettext_lazy as _  # noqa: E402
 
 UNFOLD_ADDITIONS = {
     # Feeds KPI cards + charts on the admin homepage.
-    # See apps/accounts/dashboard.py::dashboard_callback
-    "DASHBOARD_CALLBACK": "apps.accounts.dashboard.dashboard_callback",
+    # See apps/core/dashboard.py::dashboard_callback
+    "DASHBOARD_CALLBACK": "apps.core.dashboard.dashboard_callback",
 
     # Site symbol — used in the sidebar header as a monogram/avatar.
     # Falls back to first character of SITE_TITLE when unset.
-    "SITE_SYMBOL": "apps.accounts.dashboard.get_site_symbol",
+    "SITE_SYMBOL": "apps.core.dashboard.get_site_symbol",
 
     # Modern indigo/violet enterprise palette (Tailwind color scale).
     # Optional — remove this key to keep Unfold's default palette.
@@ -52,19 +52,19 @@ UNFOLD_ADDITIONS = {
         # when non-zero. Leave unset for no badge.
         "badge": lambda request: None,
         "navigation": [
-            # ── Overview ──────────────────────────────────────────────
+            # ── Dashboard ────────────────────────────────────────────
             {
-                "title": _("Overview"),
+                "title": _("Dashboard"),
                 "collapsible": False,
                 "items": [
                     {
-                        "title": _("Dashboard"),
+                        "title": _("Overview"),
                         "icon": "dashboard",
                         "link": reverse_lazy("admin:index"),
                     },
                 ],
             },
-            # ── Identity & Access (apps.accounts) ────────────────────
+            # ── Identity & Access ──────────────────────────────────
             {
                 "title": _("Identity & Access"),
                 "collapsible": True,
@@ -81,7 +81,7 @@ UNFOLD_ADDITIONS = {
                     },
                     {
                         "title": _("Roles"),
-                        "icon": "shield_person",
+                        "icon": "shield",
                         "link": reverse_lazy("admin:accounts_role_changelist"),
                     },
                     {
@@ -94,13 +94,6 @@ UNFOLD_ADDITIONS = {
                         "icon": "assignment_ind",
                         "link": reverse_lazy("admin:accounts_userroleassignment_changelist"),
                     },
-                ],
-            },
-            # ── Security (apps.accounts) ─────────────────────────────
-            {
-                "title": _("Security"),
-                "collapsible": True,
-                "items": [
                     {
                         "title": _("Active Sessions"),
                         "icon": "devices",
@@ -128,53 +121,9 @@ UNFOLD_ADDITIONS = {
                     },
                 ],
             },
-            # ── Content Library (apps.core) ──────────────────────────
+            # ── Content ─────────────────────────────────────────────
             {
-                "title": _("Content Library"),
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": _("Media Assets"),
-                        "icon": "perm_media",
-                        "link": reverse_lazy("admin:core_mediaasset_changelist"),
-                    },
-                    {
-                        "title": _("Content Revisions"),
-                        "icon": "history",
-                        "link": reverse_lazy("admin:core_contentrevision_changelist"),
-                    },
-                    {
-                        "title": _("SEO Settings"),
-                        "icon": "search",
-                        "link": reverse_lazy("admin:core_seosettings_changelist"),
-                    },
-                    {
-                        "title": _("Redirects"),
-                        "icon": "alt_route",
-                        "link": reverse_lazy("admin:core_redirect_changelist"),
-                    },
-                ],
-            },
-            # ── Integrations & API ──────────────────────────────────
-            {
-                "title": _("Integrations & API"),
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": _("API Keys"),
-                        "icon": "vpn_key",
-                        "link": reverse_lazy("admin:core_apikey_changelist"),
-                    },
-                    {
-                        "title": _("Third-Party Integrations"),
-                        "icon": "settings_input_component",
-                        "link": reverse_lazy("admin:notifications_thirdpartyintegration_changelist"),
-                    },
-                ],
-            },
-            # ── Website Content (apps.content) ───────────────────────
-            {
-                "title": _("Website Content"),
+                "title": _("Content"),
                 "collapsible": True,
                 "items": [
                     {
@@ -186,11 +135,6 @@ UNFOLD_ADDITIONS = {
                         "title": _("Service Categories"),
                         "icon": "category",
                         "link": reverse_lazy("admin:content_servicecategory_changelist"),
-                    },
-                    {
-                        "title": _("Case Studies"),
-                        "icon": "cases",
-                        "link": reverse_lazy("admin:content_casestudy_changelist"),
                     },
                     {
                         "title": _("Blog Posts"),
@@ -206,6 +150,21 @@ UNFOLD_ADDITIONS = {
                         "title": _("Blog Tags"),
                         "icon": "sell",
                         "link": reverse_lazy("admin:content_blogtag_changelist"),
+                    },
+                    {
+                        "title": _("Blog Authors"),
+                        "icon": "person_book",
+                        "link": reverse_lazy("admin:content_blogauthor_changelist"),
+                    },
+                    {
+                        "title": _("Case Studies"),
+                        "icon": "cases",
+                        "link": reverse_lazy("admin:content_casestudy_changelist"),
+                    },
+                    {
+                        "title": _("Portfolio"),
+                        "icon": "photo_library",
+                        "link": reverse_lazy("admin:content_portfolioproject_changelist"),
                     },
                     {
                         "title": _("Team Members"),
@@ -238,16 +197,6 @@ UNFOLD_ADDITIONS = {
                         "link": reverse_lazy("admin:content_processstep_changelist"),
                     },
                     {
-                        "title": _("Portfolio Projects"),
-                        "icon": "photo_library",
-                        "link": reverse_lazy("admin:content_portfolioproject_changelist"),
-                    },
-                    {
-                        "title": _("Blog Authors"),
-                        "icon": "person_book",
-                        "link": reverse_lazy("admin:content_blogauthor_changelist"),
-                    },
-                    {
                         "title": _("AI Capabilities"),
                         "icon": "psychology",
                         "link": reverse_lazy("admin:content_aicapability_changelist"),
@@ -269,9 +218,9 @@ UNFOLD_ADDITIONS = {
                     },
                 ],
             },
-            # ── Service Detail Pages ──────────────────────────────
+            # ── Service Builder (sub-models) ───────────────────────
             {
-                "title": _("Service Detail Pages"),
+                "title": _("Service Builder"),
                 "collapsible": True,
                 "items": [
                     {
@@ -280,7 +229,7 @@ UNFOLD_ADDITIONS = {
                         "link": reverse_lazy("admin:content_serviceheroimage_changelist"),
                     },
                     {
-                        "title": _("Process Steps"),
+                        "title": _("Service Steps"),
                         "icon": "account_tree",
                         "link": reverse_lazy("admin:content_serviceprocessstep_changelist"),
                     },
@@ -295,7 +244,7 @@ UNFOLD_ADDITIONS = {
                         "link": reverse_lazy("admin:content_serviceaddon_changelist"),
                     },
                     {
-                        "title": _("Comparison Rows"),
+                        "title": _("Pricing Comparison"),
                         "icon": "compare",
                         "link": reverse_lazy("admin:content_servicecomparisonrow_changelist"),
                     },
@@ -305,7 +254,7 @@ UNFOLD_ADDITIONS = {
                         "link": reverse_lazy("admin:content_serviceclientlogo_changelist"),
                     },
                     {
-                        "title": _("Testimonials"),
+                        "title": _("Linked Testimonials"),
                         "icon": "rate_review",
                         "link": reverse_lazy("admin:content_servicetestimonial_changelist"),
                     },
@@ -321,7 +270,7 @@ UNFOLD_ADDITIONS = {
                     },
                 ],
             },
-            # ── Sales & CRM (apps.crm) ────────────────────────────────
+            # ── Sales & CRM ─────────────────────────────────────────
             {
                 "title": _("Sales & CRM"),
                 "collapsible": True,
@@ -337,7 +286,7 @@ UNFOLD_ADDITIONS = {
                         "link": reverse_lazy("admin:crm_leadactivity_changelist"),
                     },
                     {
-                        "title": _("Consultation Bookings"),
+                        "title": _("Consultations"),
                         "icon": "calendar_month",
                         "link": reverse_lazy("admin:crm_consultationbooking_changelist"),
                     },
@@ -352,12 +301,12 @@ UNFOLD_ADDITIONS = {
                         "link": reverse_lazy("admin:crm_supportticket_changelist"),
                     },
                     {
-                        "title": _("Newsletter Subscribers"),
+                        "title": _("Newsletter"),
                         "icon": "mail",
                         "link": reverse_lazy("admin:crm_newslettersubscriber_changelist"),
                     },
                     {
-                        "title": _("Cost Calculator Rules"),
+                        "title": _("Calculator Rules"),
                         "icon": "calculate",
                         "link": reverse_lazy("admin:crm_costcalculatorrule_changelist"),
                     },
@@ -368,39 +317,7 @@ UNFOLD_ADDITIONS = {
                     },
                 ],
             },
-            # ── Notifications (apps.notifications) ───────────────────
-            {
-                "title": _("Notifications"),
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": _("Notifications"),
-                        "icon": "notifications",
-                        "link": reverse_lazy("admin:notifications_notification_changelist"),
-                    },
-                    {
-                        "title": _("Templates"),
-                        "icon": "description",
-                        "link": reverse_lazy("admin:notifications_notificationtemplate_changelist"),
-                    },
-                    {
-                        "title": _("Provider Configs"),
-                        "icon": "settings_input_component",
-                        "link": reverse_lazy("admin:notifications_notificationproviderconfig_changelist"),
-                    },
-                    {
-                        "title": _("Preferences"),
-                        "icon": "tune",
-                        "link": reverse_lazy("admin:notifications_notificationpreference_changelist"),
-                    },
-                    {
-                        "title": _("Delivery Attempts"),
-                        "icon": "receipt_long",
-                        "link": reverse_lazy("admin:notifications_notificationdeliveryattempt_changelist"),
-                    },
-                ],
-            },
-            # ── AI Assistant (apps.assistant) ─────────────────────────
+            # ── AI Assistant ───────────────────────────────────────
             {
                 "title": _("AI Assistant"),
                 "collapsible": True,
@@ -412,12 +329,81 @@ UNFOLD_ADDITIONS = {
                     },
                     {
                         "title": _("Knowledge Base"),
-                        "icon": "psychology",
+                        "icon": "menu_book",
                         "link": reverse_lazy("admin:assistant_aiknowledgeentry_changelist"),
                     },
                 ],
             },
-            # ── System (framework/infra models, kept out of the way) ─
+            # ── Notifications ──────────────────────────────────────
+            {
+                "title": _("Notifications"),
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("All Notifications"),
+                        "icon": "notifications",
+                        "link": reverse_lazy("admin:notifications_notification_changelist"),
+                    },
+                    {
+                        "title": _("Templates"),
+                        "icon": "description",
+                        "link": reverse_lazy("admin:notifications_notificationtemplate_changelist"),
+                    },
+                    {
+                        "title": _("Providers"),
+                        "icon": "settings_input_component",
+                        "link": reverse_lazy("admin:notifications_notificationproviderconfig_changelist"),
+                    },
+                    {
+                        "title": _("Preferences"),
+                        "icon": "tune",
+                        "link": reverse_lazy("admin:notifications_notificationpreference_changelist"),
+                    },
+                    {
+                        "title": _("Delivery Log"),
+                        "icon": "receipt_long",
+                        "link": reverse_lazy("admin:notifications_notificationdeliveryattempt_changelist"),
+                    },
+                ],
+            },
+            # ── Settings & Tools ───────────────────────────────────
+            {
+                "title": _("Settings & Tools"),
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Media Assets"),
+                        "icon": "perm_media",
+                        "link": reverse_lazy("admin:core_mediaasset_changelist"),
+                    },
+                    {
+                        "title": _("API Keys"),
+                        "icon": "vpn_key",
+                        "link": reverse_lazy("admin:core_apikey_changelist"),
+                    },
+                    {
+                        "title": _("Third-Party Integrations"),
+                        "icon": "settings_input_component",
+                        "link": reverse_lazy("admin:notifications_thirdpartyintegration_changelist"),
+                    },
+                    {
+                        "title": _("SEO Settings"),
+                        "icon": "search",
+                        "link": reverse_lazy("admin:core_seosettings_changelist"),
+                    },
+                    {
+                        "title": _("Redirects"),
+                        "icon": "alt_route",
+                        "link": reverse_lazy("admin:core_redirect_changelist"),
+                    },
+                    {
+                        "title": _("Content Revisions"),
+                        "icon": "history",
+                        "link": reverse_lazy("admin:core_contentrevision_changelist"),
+                    },
+                ],
+            },
+            # ── System ─────────────────────────────────────────────
             {
                 "title": _("System"),
                 "collapsible": True,

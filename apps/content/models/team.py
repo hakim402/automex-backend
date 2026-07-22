@@ -9,10 +9,12 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from parler.models import TranslatableModel, TranslatedFields
+
 from apps.core.models import OrderableModel, TimeStampedModel, UUIDModel
 
 
-class TeamMember(UUIDModel, TimeStampedModel, OrderableModel):
+class TeamMember(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
     class Department(models.TextChoices):
         ENGINEERING = "engineering", _("Engineering")
         DESIGN      = "design",      _("Design")
@@ -31,13 +33,15 @@ class TeamMember(UUIDModel, TimeStampedModel, OrderableModel):
         related_name="team_profile", verbose_name=_("linked user account"),
     )
 
-    full_name  = models.CharField(_("full name"), max_length=200)
+    translations = TranslatedFields(
+        full_name  = models.CharField(_("full name"), max_length=200),
+        role_title = models.CharField(_("role title"), max_length=200),
+        bio        = models.TextField(_("bio"), blank=True),
+    )
     slug       = models.SlugField(_("slug"), max_length=220, unique=True)
-    role_title = models.CharField(_("role title"), max_length=200)
     department = models.CharField(
         _("department"), max_length=20, choices=Department.choices, default=Department.OTHER,
     )
-    bio   = models.TextField(_("bio"), blank=True)
     photo = models.ForeignKey(
         "core.MediaAsset",
         on_delete=models.SET_NULL, null=True, blank=True,
@@ -81,9 +85,11 @@ class TeamMember(UUIDModel, TimeStampedModel, OrderableModel):
     )
 
     class Meta:
-        ordering            = ["order", "full_name"]
+        ordering            = ["order"]
         verbose_name        = _("team member")
         verbose_name_plural = _("team members")
 
     def __str__(self) -> str:
-        return f"{self.full_name} ({self.role_title})"
+        name = self.safe_translation_getter("full_name", any_language=True) or self.slug
+        role = self.safe_translation_getter("role_title", any_language=True) or ""
+        return f"{name} ({role})" if role else name

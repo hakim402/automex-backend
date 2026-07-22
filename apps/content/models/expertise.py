@@ -9,10 +9,12 @@ from __future__ import annotations
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from parler.models import TranslatableModel, TranslatedFields
+
 from apps.core.models import OrderableModel, TimeStampedModel, UUIDModel
 
 
-class AICapability(UUIDModel, TimeStampedModel, OrderableModel):
+class AICapability(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
     class Category(models.TextChoices):
         NLP                 = "nlp",                 _("NLP")
         COMPUTER_VISION     = "computer_vision",     _("Computer Vision")
@@ -27,9 +29,11 @@ class AICapability(UUIDModel, TimeStampedModel, OrderableModel):
         PRODUCTION   = "production",   _("Production")
         EXPERIMENTAL = "experimental", _("Experimental")
 
-    name = models.CharField(_("name"), max_length=200)
+    translations = TranslatedFields(
+        name        = models.CharField(_("name"), max_length=200),
+        description = models.TextField(_("description"), blank=True),
+    )
     slug = models.SlugField(_("slug"), max_length=220, unique=True)
-    description = models.TextField(_("description"), blank=True)
 
     category = models.CharField(
         _("category"), max_length=30, choices=Category.choices, db_index=True,
@@ -59,15 +63,15 @@ class AICapability(UUIDModel, TimeStampedModel, OrderableModel):
     is_active = models.BooleanField(_("active"), default=True, db_index=True)
 
     class Meta:
-        ordering = ["order", "name"]
+        ordering = ["order"]
         verbose_name = _("AI capability")
         verbose_name_plural = _("AI capabilities")
 
     def __str__(self) -> str:
-        return self.name
+        return self.safe_translation_getter("name", any_language=True) or self.slug
 
 
-class TechExpertiseArea(UUIDModel, TimeStampedModel, OrderableModel):
+class TechExpertiseArea(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
     class Category(models.TextChoices):
         ARCHITECTURE   = "architecture",    _("Architecture")
         CLOUD          = "cloud",           _("Cloud")
@@ -78,9 +82,11 @@ class TechExpertiseArea(UUIDModel, TimeStampedModel, OrderableModel):
         DEVOPS         = "devops",          _("DevOps")
         QA             = "qa",              _("QA")
 
-    name = models.CharField(_("name"), max_length=200)
+    translations = TranslatedFields(
+        name        = models.CharField(_("name"), max_length=200),
+        description = models.TextField(_("description"), blank=True),
+    )
     slug = models.SlugField(_("slug"), max_length=220, unique=True)
-    description = models.TextField(_("description"), blank=True)
     icon = models.CharField(_("icon"), max_length=100, blank=True, help_text=_("Icon class or emoji."))
 
     category = models.CharField(
@@ -99,9 +105,9 @@ class TechExpertiseArea(UUIDModel, TimeStampedModel, OrderableModel):
     is_active = models.BooleanField(_("active"), default=True, db_index=True)
 
     class Meta:
-        ordering = ["order", "name"]
+        ordering = ["order"]
         verbose_name = _("tech expertise area")
         verbose_name_plural = _("tech expertise areas")
 
     def __str__(self) -> str:
-        return self.name
+        return self.safe_translation_getter("name", any_language=True) or self.slug

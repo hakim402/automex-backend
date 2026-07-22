@@ -222,12 +222,20 @@ class Service(
         super().save(*args, **kwargs)
 
 
-class ServiceHeroImage(UUIDModel, TimeStampedModel, OrderableModel):
+class ServiceHeroImage(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
     """
     Additional hero images for a service page gallery / carousel.
     Allows multiple hero images per service with individual captions
     and ordering, replacing the single hero_image limitation.
     """
+
+    translations = TranslatedFields(
+        title   = models.CharField(_("title"), max_length=200, blank=True),
+        caption = models.CharField(
+            _("caption"), max_length=255, blank=True,
+            help_text=_("Optional caption or overlay text displayed on the hero image."),
+        ),
+    )
 
     service = models.ForeignKey(
         Service,
@@ -239,10 +247,6 @@ class ServiceHeroImage(UUIDModel, TimeStampedModel, OrderableModel):
         "core.MediaAsset",
         on_delete=models.SET_NULL, null=True, blank=True,
         related_name="+", verbose_name=_("image"),
-    )
-    caption = models.CharField(
-        _("caption"), max_length=255, blank=True,
-        help_text=_("Optional caption or overlay text displayed on the hero image."),
     )
     is_cover = models.BooleanField(
         _("cover image"), default=False,
@@ -308,11 +312,16 @@ class ServiceProcessStep(UUIDModel, TimeStampedModel, OrderableModel):
         return f"{self.service} — {title}"
 
 
-class ServiceDeliverable(UUIDModel, TimeStampedModel, OrderableModel):
+class ServiceDeliverable(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
     """
     Concrete output/deliverable the client receives upon engagement.
     e.g. 'Source code repository', 'Technical documentation', 'CI/CD pipeline'.
     """
+
+    translations = TranslatedFields(
+        title       = models.CharField(_("title"), max_length=200),
+        description = models.TextField(_("description"), blank=True),
+    )
 
     service = models.ForeignKey(
         Service,
@@ -320,8 +329,6 @@ class ServiceDeliverable(UUIDModel, TimeStampedModel, OrderableModel):
         related_name="deliverables",
         verbose_name=_("service"),
     )
-    title = models.CharField(_("title"), max_length=200)
-    description = models.TextField(_("description"), blank=True)
     icon = models.CharField(
         _("icon"), max_length=100, blank=True,
         help_text=_("Icon identifier for the frontend, e.g. 'lucide:file-code'."),
@@ -336,14 +343,20 @@ class ServiceDeliverable(UUIDModel, TimeStampedModel, OrderableModel):
         ]
 
     def __str__(self) -> str:
-        return f"{self.service} — {self.title}"
+        t = self.safe_translation_getter("title", any_language=True) or "Unnamed"
+        return f"{self.service} — {t}"
 
 
-class ServiceAddOn(UUIDModel, TimeStampedModel, OrderableModel):
+class ServiceAddOn(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
     """
     Optional upsell package / add-on service a client can purchase
     in addition to the base service. e.g. '24/7 Monitoring', 'Priority Support'.
     """
+
+    translations = TranslatedFields(
+        name        = models.CharField(_("name"), max_length=200),
+        description = models.TextField(_("description"), blank=True),
+    )
 
     service = models.ForeignKey(
         Service,
@@ -351,8 +364,6 @@ class ServiceAddOn(UUIDModel, TimeStampedModel, OrderableModel):
         related_name="add_ons",
         verbose_name=_("service"),
     )
-    name = models.CharField(_("name"), max_length=200)
-    description = models.TextField(_("description"), blank=True)
     price = models.DecimalField(
         _("price"), max_digits=10, decimal_places=2,
         null=True, blank=True,
@@ -372,24 +383,28 @@ class ServiceAddOn(UUIDModel, TimeStampedModel, OrderableModel):
         ]
 
     def __str__(self) -> str:
-        return f"{self.service} — {self.name}"
+        name = self.safe_translation_getter("name", any_language=True) or "Unnamed"
+        return f"{self.service} — {name}"
 
 
-class ServiceComparisonRow(UUIDModel, TimeStampedModel, OrderableModel):
+class ServiceComparisonRow(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
     """
     Single row in a feature-comparison pricing table across service tiers.
     Renders as a row: Feature | Standard | Premium | Enterprise.
     """
+
+    translations = TranslatedFields(
+        feature_name = models.CharField(
+            _("feature name"), max_length=200,
+            help_text=_("The feature or capability being compared."),
+        ),
+    )
 
     service = models.ForeignKey(
         Service,
         on_delete=models.CASCADE,
         related_name="comparison_rows",
         verbose_name=_("service"),
-    )
-    feature_name = models.CharField(
-        _("feature name"), max_length=200,
-        help_text=_("The feature or capability being compared."),
     )
     standard_value = models.CharField(
         _("standard"), max_length=100, blank=True,
@@ -417,14 +432,22 @@ class ServiceComparisonRow(UUIDModel, TimeStampedModel, OrderableModel):
         ]
 
     def __str__(self) -> str:
-        return f"{self.service} — {self.feature_name}"
+        feature = self.safe_translation_getter("feature_name", any_language=True) or ""
+        return f"{self.service} — {feature}"
 
 
-class ServiceClientLogo(UUIDModel, TimeStampedModel, OrderableModel):
+class ServiceClientLogo(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
     """
     Client logo displayed in the 'Trusted By' / 'Our Clients' section
     of a service page. Uses MediaAsset for centralized asset management.
     """
+
+    translations = TranslatedFields(
+        client_name = models.CharField(
+            _("client name"), max_length=200, blank=True,
+            help_text=_("Displayed on hover or as alt text for the logo."),
+        ),
+    )
 
     service = models.ForeignKey(
         Service,
@@ -436,10 +459,6 @@ class ServiceClientLogo(UUIDModel, TimeStampedModel, OrderableModel):
         "core.MediaAsset",
         on_delete=models.SET_NULL, null=True, blank=True,
         related_name="+", verbose_name=_("logo"),
-    )
-    client_name = models.CharField(
-        _("client name"), max_length=200, blank=True,
-        help_text=_("Displayed on hover or as alt text for the logo."),
     )
     client_url = models.URLField(
         _("client URL"), max_length=500, blank=True,
@@ -455,7 +474,8 @@ class ServiceClientLogo(UUIDModel, TimeStampedModel, OrderableModel):
         ]
 
     def __str__(self) -> str:
-        return f"{self.service} — {self.client_name or 'Unnamed client'}"
+        name = self.safe_translation_getter("client_name", any_language=True) or "Unnamed client"
+        return f"{self.service} — {name}"
 
 
 class ServiceTestimonial(UUIDModel, TimeStampedModel, OrderableModel):
@@ -497,10 +517,11 @@ class ServiceTestimonial(UUIDModel, TimeStampedModel, OrderableModel):
         ]
 
     def __str__(self) -> str:
-        return f"{self.service} — {self.testimonial.client_name}"
+        name = self.testimonial.safe_translation_getter("client_name", any_language=True) or "Unnamed"
+        return f"{self.service} — {name}"
 
 
-class ServiceDocument(UUIDModel, TimeStampedModel, OrderableModel):
+class ServiceDocument(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
     """
     Downloadable resource linked to a service page.
     e.g. whitepapers, detailed datasheets, technical specifications.
@@ -514,14 +535,17 @@ class ServiceDocument(UUIDModel, TimeStampedModel, OrderableModel):
         PROPOSAL    = "proposal",    _("Proposal Template")
         OTHER       = "other",       _("Other")
 
+    translations = TranslatedFields(
+        title       = models.CharField(_("title"), max_length=255),
+        description = models.TextField(_("description"), blank=True),
+    )
+
     service = models.ForeignKey(
         Service,
         on_delete=models.CASCADE,
         related_name="documents",
         verbose_name=_("service"),
     )
-    title = models.CharField(_("title"), max_length=255)
-    description = models.TextField(_("description"), blank=True)
     file = models.ForeignKey(
         "core.MediaAsset",
         on_delete=models.SET_NULL, null=True, blank=True,
@@ -550,33 +574,37 @@ class ServiceDocument(UUIDModel, TimeStampedModel, OrderableModel):
         ]
 
     def __str__(self) -> str:
-        return f"{self.service} — {self.title}"
+        t = self.safe_translation_getter("title", any_language=True) or ""
+        return f"{self.service} — {t}"
 
 
-class ServiceSLA(UUIDModel, TimeStampedModel, OrderableModel):
+class ServiceSLA(TranslatableModel, UUIDModel, TimeStampedModel, OrderableModel):
     """
     Service-Level Agreement guarantee for enterprise-tier services.
     Displayed as trust signals on the service page to reassure
     enterprise clients about support commitments.
     """
 
+    translations = TranslatedFields(
+        guarantee_name = models.CharField(
+            _("guarantee name"), max_length=200,
+            help_text=_("e.g. 'Uptime Guarantee', 'Response Time SLA', '24/7 Support'."),
+        ),
+        value = models.CharField(
+            _("value"), max_length=100,
+            help_text=_("e.g. '99.9%', '< 4 hours', 'Always available'."),
+        ),
+        description = models.TextField(
+            _("description"), blank=True,
+            help_text=_("Detailed explanation of this SLA guarantee."),
+        ),
+    )
+
     service = models.ForeignKey(
         Service,
         on_delete=models.CASCADE,
         related_name="slas",
         verbose_name=_("service"),
-    )
-    guarantee_name = models.CharField(
-        _("guarantee name"), max_length=200,
-        help_text=_("e.g. 'Uptime Guarantee', 'Response Time SLA', '24/7 Support'."),
-    )
-    value = models.CharField(
-        _("value"), max_length=100,
-        help_text=_("e.g. '99.9%', '< 4 hours', 'Always available'."),
-    )
-    description = models.TextField(
-        _("description"), blank=True,
-        help_text=_("Detailed explanation of this SLA guarantee."),
     )
     icon = models.CharField(
         _("icon"), max_length=100, blank=True,
@@ -592,4 +620,6 @@ class ServiceSLA(UUIDModel, TimeStampedModel, OrderableModel):
         ]
 
     def __str__(self) -> str:
-        return f"{self.service} — {self.guarantee_name}: {self.value}"
+        name = self.safe_translation_getter("guarantee_name", any_language=True) or ""
+        val = self.safe_translation_getter("value", any_language=True) or ""
+        return f"{self.service} — {name}: {val}"
