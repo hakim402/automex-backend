@@ -1,16 +1,39 @@
 """
 apps/core/permissions.py
 ───────────────────────────
-DRF permission classes shared across apps.
+DRF permission and authentication classes shared across apps.
 """
 from __future__ import annotations
 
+import logging
+
 from django.utils import timezone
+from rest_framework.authentication import BaseAuthentication
 from rest_framework.permissions import BasePermission
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from apps.core.models import APIKey
 
+logger = logging.getLogger(__name__)
+
 API_KEY_HEADER = "HTTP_X_API_KEY"  # request.META key for the "X-API-Key" header
+
+
+class OptionalJWTAuthentication(BaseAuthentication):
+    """
+    Attempts JWT authentication but never raises — if no valid token is
+    present, the request proceeds as anonymous (request.user will be
+    AnonymousUser).  Use on public endpoints that *optionally* accept a
+    Bearer token so authenticated users get their records linked while
+    anonymous visitors still work.
+    """
+
+    def authenticate(self, request):
+        try:
+            return JWTAuthentication().authenticate(request)
+        except Exception:
+            # Invalid / expired / malformed token → treat as anonymous
+            return None
 
 
 class HasValidAPIKey(BasePermission):

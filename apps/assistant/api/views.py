@@ -17,7 +17,7 @@ from drf_spectacular.utils import extend_schema
 
 from apps.assistant import services
 from apps.assistant.models import AIConversation, AIMessage
-from apps.core.permissions import HasValidAPIKey
+from apps.core.permissions import HasValidAPIKey, OptionalJWTAuthentication
 
 from .serializers import (
     ChatRequestSerializer,
@@ -28,21 +28,11 @@ from .serializers import (
 
 
 class ChatView(generics.GenericAPIView):
-    authentication_classes = []
+    authentication_classes = [OptionalJWTAuthentication]
     permission_classes = [HasValidAPIKey]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "ai_assistant"
     serializer_class = ChatRequestSerializer
-
-    def _get_optional_user(self, request):
-        """Attempt to resolve an authenticated user from the request, if present."""
-        try:
-            from rest_framework.authentication import JWTAuthentication
-            auth = JWTAuthentication()
-            result = auth.authenticate(request)
-            return result[0] if result else None
-        except Exception:
-            return None
 
     @extend_schema(request=ChatRequestSerializer, responses=ChatResponseSerializer)
     def post(self, request, *args, **kwargs):
@@ -50,7 +40,7 @@ class ChatView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        user = self._get_optional_user(request)
+        user = request.user if request.user.is_authenticated else None
 
         result = services.handle_chat_message(
             request=request,

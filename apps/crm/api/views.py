@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from apps.core.permissions import HasValidAPIKey
+from apps.core.permissions import HasValidAPIKey, OptionalJWTAuthentication
 
 # Added drf-spectacular import
 from drf_spectacular.utils import extend_schema
@@ -33,10 +33,16 @@ from .serializers import (
 
 
 class PublicWriteMixin:
-    authentication_classes = []
+    authentication_classes = [OptionalJWTAuthentication]
     permission_classes = [HasValidAPIKey]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "public_write"
+
+
+def _optional_user(request):
+    """Return the authenticated user if present, else None (anonymous)."""
+    user = request.user
+    return user if user and user.is_authenticated else None
 
 
 class PublicReadMixin:
@@ -60,7 +66,9 @@ class ContactLeadCreateView(PublicWriteMixin, generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        lead = services.capture_contact_lead(request=request, validated_data=serializer.validated_data)
+        lead = services.capture_contact_lead(
+            request=request, validated_data=serializer.validated_data, user=_optional_user(request),
+        )
         return Response(LeadAckSerializer(lead).data, status=status.HTTP_201_CREATED)
 
 
@@ -78,7 +86,9 @@ class QuoteRequestCreateView(PublicWriteMixin, generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        lead = services.capture_quote_lead(request=request, validated_data=serializer.validated_data)
+        lead = services.capture_quote_lead(
+            request=request, validated_data=serializer.validated_data, user=_optional_user(request),
+        )
         return Response(LeadAckSerializer(lead).data, status=status.HTTP_201_CREATED)
 
 
@@ -96,7 +106,9 @@ class ConsultationBookingCreateView(PublicWriteMixin, generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        booking = services.book_consultation(request=request, validated_data=serializer.validated_data)
+        booking = services.book_consultation(
+            request=request, validated_data=serializer.validated_data, user=_optional_user(request),
+        )
         return Response(ConsultationBookingAckSerializer(booking).data, status=status.HTTP_201_CREATED)
 
 
@@ -143,5 +155,7 @@ class NewsletterSubscribeView(PublicWriteMixin, generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        subscriber = services.subscribe_newsletter(request=request, validated_data=serializer.validated_data)
+        subscriber = services.subscribe_newsletter(
+            request=request, validated_data=serializer.validated_data, user=_optional_user(request),
+        )
         return Response(NewsletterSubscriberAckSerializer(subscriber).data, status=status.HTTP_201_CREATED)

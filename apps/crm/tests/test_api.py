@@ -10,6 +10,7 @@ from rest_framework.test import APIClient
 
 from apps.content.tests.factories import create_service
 from apps.core.models import APIKey
+from apps.accounts.tests.factories import create_user
 from apps.crm.models import ConsultationBooking, Lead, NewsletterSubscriber
 
 from .factories import create_availability_slot
@@ -208,3 +209,108 @@ def test_newsletter_subscribe_idempotent_on_repeat(client_with_key):
     response = client_with_key.post("/api/v1/crm/newsletter/subscribe/", {"email": "sub2@example.com"})
     assert response.status_code == 201
     assert NewsletterSubscriber.objects.filter(email="sub2@example.com").count() == 1
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# AUTHENTICATED USER LINKING
+# ──────────────────────────────────────────────────────────────────────────────
+
+def test_contact_lead_links_authenticated_user():
+    """When a valid JWT is present, the lead must be linked to the user."""
+    _, raw_key = APIKey.generate(name="test-frontend")
+    user = create_user(email="auth@example.com")
+    client = APIClient()
+    client.credentials(HTTP_X_API_KEY=raw_key)
+    client.force_authenticate(user=user)
+
+    response = client.post("/api/v1/crm/leads/contact/", {
+        "full_name": "Auth User",
+        "email": "auth@example.com",
+        "message": "Logged in submission.",
+    })
+
+    assert response.status_code == 201
+    lead = Lead.objects.get(email="auth@example.com")
+    assert lead.user == user
+    # Authenticated users must NOT get a guest_token
+    assert lead.guest_token is None
+
+
+def test_quote_lead_links_authenticated_user():
+    _, raw_key = APIKey.generate(name="test-frontend")
+    user = create_user(email="quote-auth@example.com")
+    client = APIClient()
+    client.credentials(HTTP_X_API_KEY=raw_key)
+    client.force_authenticate(user=user)
+
+    response = client.post("/api/v1/crm/leads/quote/", {
+        "full_name": "Quote Auth",
+        "email": "quote-auth@example.com",
+    }, format="json")
+
+    assert response.status_code == 201
+    lead = Lead.objects.get(email="quote-auth@example.com")
+    assert lead.user == user
+
+
+def test_consultation_booking_links_authenticated_user():
+    _, raw_key = APIKey.generate(name="test-frontend")
+    user = create_user(email="booker-auth@example.com")
+    slot = create_availability_slot(weekday=0, start_time=time(9, 0), end_time=time(17, 0), max_bookings=2)
+    target_date = _next_monday()
+
+    client = APIClient()
+    client.credentials(HTTP_X_API_KEY=raw_key)
+    client.force_authenticate(user=user)
+
+    response = client.post("/api/v1/crm/bookings/consultations/", {
+        "full_name": "Auth Booker",
+        "email": "booker-auth@example.com",
+        "slot": str(slot.id),
+        "scheduled_date": target_date.isoformat(),
+        "scheduled_time": "10:00:00",
+    }, format="json")
+
+    assert response.status_code == 201
+    booking = ConsultationBooking.objects.get(lead__email="booker-auth@example.com")
+    assert booking.user == user
+    assert booking.lead.user == user
+
+
+def test_anonymous_submission_still_works_without_jwt():
+    """Anonymous submissions (API-key only, no JWT) must continue to work
+    and produce leads with guest_token but no user."""
+    _, raw_key = APIKey.generate(name="test-frontend")
+    client = APIClient()
+    client.credentials(HTTP_X_API_KEY=raw_key)
+
+    response = client.post("/api/v1/crm/leads/contact/", {
+        "full_name": "Anonymous Visitor",
+        "email": "anon@example.com",
+    })
+
+    assert response.status_code == 201
+    lead = Lead.objects.get(email="anon@example.com")
+    assert lead.user is None
+    assert lead.guest_token is not None
+
+
+def test_invalid_jwt_does_not_break_anonymous_submission():
+    """A malformed/expired JWT must be silently ignored — the request proceeds
+    as anonymous rather than returning 401."""
+    _, raw_key = APIKey.generate(name="test-frontend")
+    client = APIClient()
+    client.credentials(
+        HTTP_X_API_KEY=raw_key,
+        HTTP_AUTHORIZATION="Bearer invalid.garbage.token",
+    )
+
+    response = client.post("/api/v1/crm/leads/contact/", {
+        "full_name": "Bad Token Visitor",
+        "email": "badtoken@example.com",
+    })
+
+    assert response.status_code == 201
+    lead = Lead.objects.get(email="badtoken@example.com")
+    assert lead.user is None
+    assert lead.guest_token is not None
