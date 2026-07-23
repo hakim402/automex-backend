@@ -116,7 +116,8 @@ def get_default_provider() -> AIProvider:
                 model=creds.get("model") or (integration.config or {}).get("model"),
                 timeout=integration.config.get("timeout") if integration.config else None,
             )
-    except Exception:
-        pass  # Fall through to settings-based config
+    except Exception as exc:
+        logger.warning("Failed to load AI provider from ThirdPartyIntegration, falling back to settings: %s", exc)
+        # Fall through to settings-based config
 
     return GroqProvider()

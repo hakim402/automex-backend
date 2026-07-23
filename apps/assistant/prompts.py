@@ -70,17 +70,23 @@ def _services_block(language_code: str) -> str:
     return block
 
 
-def _knowledge_block() -> str:
-    cache_key = "assistant_knowledge_block"
+def _knowledge_block(language_code: str) -> str:
+    cache_key = f"assistant_knowledge_block_{language_code}"
     block = cache.get(cache_key)
     if block is not None:
         return block
 
-    entries = AIKnowledgeEntry.objects.filter(is_active=True)[:30]
+    entries = AIKnowledgeEntry.objects.filter(is_active=True).prefetch_related("translations")[:30]
     if not entries:
         block = "(no additional curated knowledge yet)"
     else:
-        block = "\n".join(f"- Q: {e.question}\n  A: {e.answer}" for e in entries)
+        lines = []
+        for e in entries:
+            question = e.safe_translation_getter("question", language_code=language_code, any_language=True) or ""
+            answer = e.safe_translation_getter("answer", language_code=language_code, any_language=True) or ""
+            if question:
+                lines.append(f"- Q: {question}\n  A: {answer}")
+        block = "\n".join(lines) if lines else "(no additional curated knowledge yet)"
 
     cache.set(cache_key, block, _PROMPT_CACHE_TTL)
     return block
@@ -90,5 +96,5 @@ def build_system_prompt(*, language_code: str = "en") -> str:
     return _SYSTEM_PROMPT_TEMPLATE.format(
         language=language_code,
         services_block=_services_block(language_code),
-        knowledge_block=_knowledge_block(),
+        knowledge_block=_knowledge_block(language_code),
     )

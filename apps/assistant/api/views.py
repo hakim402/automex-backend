@@ -100,7 +100,7 @@ class ConversationDetailView(APIView):
     )
     def get(self, request, pk):
         try:
-            conversation = AIConversation.objects.get(pk=pk, user=request.user)
+            conversation = AIConversation.objects.prefetch_related("messages").get(pk=pk, user=request.user)
         except AIConversation.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 

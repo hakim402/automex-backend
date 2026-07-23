@@ -318,7 +318,16 @@ class NotificationAdmin(ModelAdmin):
 
     @admin.action(description=_("Retry selected (reset to pending)"))
     def action_retry(self, request, queryset):
-        updated = queryset.filter(status="failed").update(status="pending", failed_reason="")
+        failed_qs = queryset.filter(status="failed")
+        notification_ids = list(failed_qs.values_list("id", flat=True))
+        updated = failed_qs.update(status="pending", failed_reason="")
+
+        # Re-enqueue delivery for each reset notification
+        if notification_ids:
+            from .tasks import send_notification_task
+            for nid in notification_ids:
+                send_notification_task.delay(str(nid))
+
         self.message_user(request, _("%(count)d notification(s) queued for retry.") % {"count": updated})
 
     @admin.action(description=_("Cancel selected"))

@@ -107,12 +107,23 @@ class GuestTicketCreateView(GuestMixin, APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
+        # Resolve related_service from UUID if provided
+        related_service = None
+        related_service_id = data.get("related_service")
+        if related_service_id:
+            from apps.content.models import Service
+            try:
+                related_service = Service.objects.published().get(pk=related_service_id)
+            except Service.DoesNotExist:
+                pass
+
         ticket = services.create_support_ticket(
             title=data["title"],
             description=data["description"],
             ticket_type=data["ticket_type"],
             guest_email=data["guest_email"],
             priority=data.get("priority"),
+            related_service=related_service,
         )
 
         # Return with the guest_token so the guest can track it

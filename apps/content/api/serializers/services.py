@@ -24,12 +24,20 @@ from .taxonomy import FAQSerializer, IndustrySerializer, ProcessStepSerializer, 
 class ServiceListSerializer(serializers.ModelSerializer):
     category   = ServiceCategorySerializer(read_only=True)
     hero_image = MediaAssetSerializer(read_only=True)
+    thumbnail_image = MediaAssetSerializer(read_only=True)
+    service_level_display = serializers.CharField(source="get_service_level_display", read_only=True)
+    pricing_model_display = serializers.CharField(source="get_pricing_model_display", read_only=True)
 
     class Meta:
         model = Service
         fields = [
             "id", "slug", "name", "short_description", "icon",
-            "hero_image", "category", "is_featured", "order",
+            "hero_image", "thumbnail_image", "category",
+            "service_level", "service_level_display",
+            "is_enterprise", "is_featured",
+            "pricing_model", "pricing_model_display",
+            "starting_price", "currency",
+            "order",
         ]
 
 
@@ -326,8 +334,7 @@ class ServiceDetailSerializer(SEOSerializerMixin, serializers.ModelSerializer):
         return ServiceSLASerializer(items, many=True).data
 
     def get_related_services(self, obj):
-        language_code = self.context.get("language_code", "en")
-        related = Service.objects.published().language(language_code).filter(
-            pk__in=obj.related_services.values_list("pk", flat=True)
-        )
-        return ServiceListSerializer(related, many=True, context=self.context).data
+        services = obj.related_services.all()
+        if hasattr(obj, "_prefetched_objects_cache") and "related_services" in obj._prefetched_objects_cache:
+            services = obj._prefetched_objects_cache["related_services"]
+        return ServiceListSerializer(services, many=True, context=self.context).data

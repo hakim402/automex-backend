@@ -11,35 +11,42 @@ from apps.content.models import AICapability, BlogPost, CaseStudy, Partner, Port
 
 
 class ServiceFilter(filters.FilterSet):
-    category    = filters.CharFilter(field_name="category__slug")
-    technology  = filters.CharFilter(field_name="technologies__slug")
-    industry    = filters.CharFilter(field_name="industries__translations__slug")
-    is_featured = filters.BooleanFilter(field_name="is_featured")
+    category       = filters.CharFilter(field_name="category__slug")
+    technology     = filters.CharFilter(field_name="technologies__slug")
+    industry       = filters.CharFilter(field_name="industries__translations__slug")
+    is_featured    = filters.BooleanFilter(field_name="is_featured")
+    service_level  = filters.CharFilter(field_name="service_level")
+    is_enterprise  = filters.BooleanFilter(field_name="is_enterprise")
+    pricing_model  = filters.CharFilter(field_name="pricing_model")
 
     class Meta:
         model = Service
-        fields = ["category", "technology", "industry", "is_featured"]
+        fields = ["category", "technology", "industry", "is_featured", "service_level", "is_enterprise", "pricing_model"]
 
 
 class CaseStudyFilter(filters.FilterSet):
-    industry    = filters.CharFilter(field_name="client_industry__translations__slug")
-    technology  = filters.CharFilter(field_name="technologies__slug")
-    service     = filters.CharFilter(field_name="related_services__translations__slug")
-    is_featured = filters.BooleanFilter(field_name="is_featured")
+    industry      = filters.CharFilter(field_name="client_industry__translations__slug")
+    technology    = filters.CharFilter(field_name="technologies__slug")
+    service       = filters.CharFilter(field_name="related_services__translations__slug")
+    is_featured   = filters.BooleanFilter(field_name="is_featured")
+    project_type  = filters.CharFilter(field_name="project_type")
+    is_ai_project = filters.BooleanFilter(field_name="is_ai_project")
 
     class Meta:
         model = CaseStudy
-        fields = ["industry", "technology", "service", "is_featured"]
+        fields = ["industry", "technology", "service", "is_featured", "project_type", "is_ai_project"]
 
 
 class BlogPostFilter(filters.FilterSet):
-    category    = filters.CharFilter(field_name="category__slug")
-    tag         = filters.CharFilter(field_name="tags__slug")
-    is_featured = filters.BooleanFilter(field_name="is_featured")
+    category     = filters.CharFilter(field_name="category__slug")
+    tag          = filters.CharFilter(field_name="tags__slug")
+    is_featured  = filters.BooleanFilter(field_name="is_featured")
+    content_type = filters.CharFilter(field_name="content_type")
+    is_premium   = filters.BooleanFilter(field_name="is_premium")
 
     class Meta:
         model = BlogPost
-        fields = ["category", "tag", "is_featured"]
+        fields = ["category", "tag", "is_featured", "content_type", "is_premium"]
 
 
 class PartnerFilter(filters.FilterSet):

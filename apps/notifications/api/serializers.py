@@ -71,6 +71,7 @@ class NotificationPreferenceUpdateSerializer(serializers.Serializer):
     def validate_preferences(self, value):
         valid_event_types = set(NotificationEventType.values)
         valid_channels = set(NotificationChannel.values)
+        valid_digest_frequencies = {"instant", "daily", "weekly"}
 
         for pref in value:
             if "event_type" not in pref or "channel" not in pref:
@@ -84,5 +85,16 @@ class NotificationPreferenceUpdateSerializer(serializers.Serializer):
             if pref["channel"] not in valid_channels:
                 raise serializers.ValidationError(
                     f"Invalid channel: {pref['channel']}"
+                )
+            # Validate is_enabled type
+            if "is_enabled" in pref and not isinstance(pref["is_enabled"], bool):
+                raise serializers.ValidationError(
+                    f"'is_enabled' must be a boolean, got: {pref['is_enabled']}"
+                )
+            # Validate digest_frequency value
+            if "digest_frequency" in pref and pref["digest_frequency"] not in valid_digest_frequencies:
+                raise serializers.ValidationError(
+                    f"Invalid digest_frequency: {pref['digest_frequency']}. "
+                    f"Must be one of: {', '.join(sorted(valid_digest_frequencies))}"
                 )
         return value

@@ -28,13 +28,22 @@ from ..models import (
 
 
 class LeadActivitySerializer(serializers.ModelSerializer):
+    attachment_url = serializers.SerializerMethodField()
+
     class Meta:
         model = LeadActivity
         fields = [
             "id", "activity_type", "description", "message",
-            "is_customer_visible", "performed_by", "created_at",
+            "is_customer_visible", "performed_by", "attachment", "attachment_url",
+            "created_at",
         ]
         read_only_fields = fields
+
+    def get_attachment_url(self, obj):
+        if obj.attachment and obj.attachment.file:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.attachment.file.url) if request else obj.attachment.file.url
+        return None
 
 
 class QuoteRequestDetailSerializer(serializers.ModelSerializer):
@@ -51,6 +60,9 @@ class QuoteRequestDetailSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_requested_service_names(self, obj):
+        # Use prefetched data if available to avoid N+1
+        if hasattr(obj, "_prefetched_objects_cache") and "requested_services" in obj._prefetched_objects_cache:
+            return [s.safe_translation_getter("name", any_language=True) for s in obj._prefetched_objects_cache["requested_services"]]
         return list(obj.requested_services.values_list("translations__name", flat=True)[:10])
 
 
@@ -58,15 +70,22 @@ class DashboardLeadSerializer(serializers.ModelSerializer):
     lead_type_display = serializers.CharField(source="get_lead_type_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     priority_display = serializers.CharField(source="get_priority_display", read_only=True)
+    budget_range_display = serializers.CharField(source="get_budget_range_display", read_only=True)
+    timeline_display = serializers.CharField(source="get_timeline_display", read_only=True)
+    source_channel_display = serializers.CharField(source="get_source_channel_display", read_only=True)
     quote_detail = QuoteRequestDetailSerializer(read_only=True)
 
     class Meta:
         model = Lead
         fields = [
             "id", "lead_type", "lead_type_display", "status", "status_display",
-            "priority", "priority_display", "full_name", "email", "company",
-            "service_interest", "message", "quote_detail",
+            "priority", "priority_display", "full_name", "email", "phone",
+            "company", "job_title", "service_interest", "industry",
+            "message", "quote_detail",
+            "budget_range", "budget_range_display", "timeline", "timeline_display",
+            "source_channel", "source_channel_display",
             "guest_token", "tags", "expected_close_date",
+            "lost_reason", "converted_at",
             "created_at", "updated_at",
         ]
         read_only_fields = fields
@@ -91,8 +110,9 @@ class DashboardBookingSerializer(serializers.ModelSerializer):
         fields = [
             "id", "lead", "scheduled_date", "scheduled_time", "timezone",
             "meeting_type", "meeting_type_display", "status", "status_display",
-            "meeting_link", "notes", "reschedule_count",
-            "confirmed_at", "cancelled_at", "created_at",
+            "meeting_link", "calendar_event_link", "notes",
+            "cancellation_reason", "reschedule_count",
+            "confirmed_at", "cancelled_at", "completed_at", "created_at",
         ]
         read_only_fields = fields
 
@@ -111,12 +131,13 @@ class DashboardRescheduleSerializer(serializers.Serializer):
 
 class SupportTicketMessageSerializer(serializers.ModelSerializer):
     author_display = serializers.SerializerMethodField()
+    attachment_url = serializers.SerializerMethodField()
 
     class Meta:
         model = SupportTicketMessage
         fields = [
             "id", "author_user", "author_name", "author_display",
-            "author_is_staff", "body", "is_read", "created_at",
+            "author_is_staff", "body", "attachment", "attachment_url", "is_read", "created_at",
         ]
         read_only_fields = fields
 
@@ -124,6 +145,12 @@ class SupportTicketMessageSerializer(serializers.ModelSerializer):
         if obj.author_user_id:
             return str(obj.author_user)
         return obj.author_name or "Guest"
+
+    def get_attachment_url(self, obj):
+        if obj.attachment and obj.attachment.file:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.attachment.file.url) if request else obj.attachment.file.url
+        return None
 
 
 class DashboardTicketSerializer(serializers.ModelSerializer):
@@ -147,6 +174,9 @@ class DashboardTicketSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_unread_message_count(self, obj):
+        # Use annotated value if available (from prefetch optimization)
+        if hasattr(obj, "_unread_count"):
+            return obj._unread_count
         return obj.messages.filter(is_read=False).count()
 
 
@@ -162,12 +192,16 @@ class DashboardTicketListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "title", "slug", "ticket_type", "ticket_type_display",
             "status", "status_display", "priority", "priority_display",
+            "description", "related_lead", "related_service", "guest_email",
             "assigned_to", "unread_message_count",
             "created_at", "updated_at",
         ]
         read_only_fields = fields
 
     def get_unread_message_count(self, obj):
+        # Use annotated value if available (from prefetch optimization)
+        if hasattr(obj, "_unread_count"):
+            return obj._unread_count
         return obj.messages.filter(is_read=False).count()
 
 

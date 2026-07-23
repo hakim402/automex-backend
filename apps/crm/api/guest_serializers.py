@@ -21,12 +21,16 @@ from ..models import Lead, SupportTicket, SupportTicketMessage
 class GuestLeadSerializer(serializers.ModelSerializer):
     lead_type_display = serializers.CharField(source="get_lead_type_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
+    budget_range_display = serializers.CharField(source="get_budget_range_display", read_only=True)
+    timeline_display = serializers.CharField(source="get_timeline_display", read_only=True)
 
     class Meta:
         model = Lead
         fields = [
             "id", "lead_type", "lead_type_display", "status", "status_display",
-            "full_name", "email", "company", "message",
+            "full_name", "email", "phone", "company", "job_title", "message",
+            "service_interest", "industry",
+            "budget_range", "budget_range_display", "timeline", "timeline_display",
             "guest_token", "created_at", "updated_at",
         ]
         read_only_fields = fields
@@ -61,12 +65,13 @@ class GuestLeadDetailSerializer(GuestLeadSerializer):
 
 class GuestTicketMessageSerializer(serializers.ModelSerializer):
     author_display = serializers.SerializerMethodField()
+    attachment_url = serializers.SerializerMethodField()
 
     class Meta:
         model = SupportTicketMessage
         fields = [
             "id", "author_name", "author_display",
-            "author_is_staff", "body", "created_at",
+            "author_is_staff", "body", "attachment", "attachment_url", "created_at",
         ]
         read_only_fields = fields
 
@@ -74,6 +79,12 @@ class GuestTicketMessageSerializer(serializers.ModelSerializer):
         if obj.author_user_id:
             return f"{obj.author_name} (Staff)" if obj.author_is_staff else obj.author_name
         return obj.author_name or "Guest"
+
+    def get_attachment_url(self, obj):
+        if obj.attachment and obj.attachment.file:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.attachment.file.url) if request else obj.attachment.file.url
+        return None
 
 
 class GuestTicketSerializer(serializers.ModelSerializer):
@@ -86,7 +97,7 @@ class GuestTicketSerializer(serializers.ModelSerializer):
         fields = [
             "id", "title", "slug", "ticket_type", "ticket_type_display",
             "status", "status_display", "priority", "description",
-            "guest_email", "guest_token", "messages",
+            "related_service", "guest_email", "guest_token", "messages",
             "created_at", "updated_at",
         ]
         read_only_fields = fields
@@ -116,6 +127,7 @@ class GuestCreateTicketSerializer(serializers.Serializer):
         choices=SupportTicket.Priority.choices,
         default=SupportTicket.Priority.NORMAL,
     )
+    related_service = serializers.UUIDField(required=False, allow_null=True)
 
 
 class GuestTicketMessageCreateSerializer(serializers.Serializer):

@@ -38,6 +38,10 @@ def _get_or_create_conversation(*, request, session_id: str | None, language: st
     if session_id:
         conversation = AIConversation.objects.filter(session_id=session_id, is_active=True).first()
         if conversation:
+            # Link anonymous conversations to the user if they authenticated later
+            if user and not conversation.user_id:
+                conversation.user = user
+                conversation.save(update_fields=["user", "updated_at"])
             return conversation
 
     return AIConversation.objects.create(
@@ -142,6 +146,7 @@ def handle_chat_message(
                     company=lead_info.get("company") or "",
                     message=message,
                     service_interest=service_interest,
+                    user=user,
                 )
                 conversation.lead = lead
                 conversation.lead_captured = True

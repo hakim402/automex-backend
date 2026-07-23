@@ -302,7 +302,7 @@ Base: `GET /api/v1/` | Header: `X-API-Key` | Paginated: `{ count, next, previous
 
 | Endpoint | Description |
 |---|---|
-| `GET /services/` | List published services. Filters: `?category=<slug>` `?technology=<slug>` `?industry=<slug>` `?is_featured=true` `?search=<term>` `?ordering=order\|published_at` |
+| `GET /services/` | List published services. Filters: `?category=<slug>` `?technology=<slug>` `?industry=<slug>` `?is_featured=true` `?search=<term>` `?ordering=order\|published_at` `?service_level=standard\|premium\|enterprise` `?is_enterprise=true` `?pricing_model=fixed\|hourly\|quote\|subscription\|retainer` |
 | `GET /services/{slug}/` | Full service detail with all sub-models |
 
 **Service List Item:**
@@ -314,8 +314,16 @@ interface ServiceListItem {
   /** 🔤 */ short_description: string;
   icon: string;                     // e.g. "lucide:code"
   hero_image: MediaAsset | null;
+  thumbnail_image: MediaAsset | null;
   category: ServiceCategory | null;
+  service_level: "standard" | "premium" | "enterprise";
+  service_level_display: string;
+  is_enterprise: boolean;
   is_featured: boolean;
+  pricing_model: "fixed" | "hourly" | "quote" | "subscription" | "retainer";
+  pricing_model_display: string;
+  starting_price: string | null;    // "5000.00"
+  currency: string;                 // "USD"
   order: number;
 }
 ```
@@ -450,6 +458,8 @@ interface ServiceCategory {
   slug: string;
   /** 🔤 */ description: string;
   icon: string;
+  icon_image: MediaAsset | null;
+  is_visible_on_nav: boolean;
   order: number;
 }
 
@@ -458,7 +468,11 @@ interface Technology {
   /** 🔤 */ name: string;
   slug: string;
   category: string;              // "backend" | "frontend" | "database" | "cloud" | "ai" | "enterprise" | "mobile" | "devops"
+  /** 🔤 */ description: string;
   icon: string;
+  logo: MediaAsset | null;
+  proficiency_level: "beginner" | "intermediate" | "advanced" | "expert";
+  proficiency_level_display: string;
   website_url: string;
   order: number;
 }
@@ -469,6 +483,8 @@ interface Industry {
   /** 🔤 */ slug: string;
   /** 🔤 */ description: string;
   icon: string;
+  icon_image: MediaAsset | null;
+  compliance_standards: string;
   order: number;
 }
 
@@ -477,6 +493,8 @@ interface ProcessStep {
   /** 🔤 */ title: string;
   /** 🔤 */ description: string;
   icon: string;
+  estimated_duration: string;
+  /** 🔤 */ deliverables: string;
   order: number;
 }
 
@@ -486,6 +504,7 @@ interface FAQ {
   /** 🔤 */ answer: string;
   category: string;              // "general" | "pricing" | "process" | "service"
   service: string | null;        // Service UUID
+  is_prominent: boolean;
   order: number;
 }
 
@@ -524,12 +543,21 @@ interface TeamMember {
   slug: string;
   /** 🔤 */ role_title: string;
   department: string;            // "engineering" | "design" | "ai" | "devops" | "management" | "sales" | "qa" | "other"
+  department_display: string;
   /** 🔤 */ bio: string;
   photo: MediaAsset | null;
+  email: string;
+  /** 🔤 */ specializations: string;
+  certifications: string;
+  years_of_experience: number | null;
+  /** 🔤 */ education: string;
+  languages: string;
+  is_leadership: boolean;
+  is_available_for_consulting: boolean;
   linkedin_url: string;
   github_url: string;
   twitter_url: string;
-  is_leadership: boolean;
+  projects_showcase: string[];   // Portfolio project UUIDs
   order: number;
 }
 
@@ -541,10 +569,16 @@ interface Testimonial {
   /** 🔤 */ client_role: string;
   /** 🔤 */ client_company: string;
   client_avatar: MediaAsset | null;
+  client_industry: Industry | null;
   /** 🔤 */ quote: string;
   rating: number;                // 1–5
   source: string;                // "manual" | "clutch" | "google" | "linkedin" | "trustpilot"
+  source_display: string;
   source_url: string;
+  video_url: string;
+  video_thumbnail: MediaAsset | null;
+  is_video_testimonial: boolean;
+  project_impact: string;
   related_case_study: string | null;
   related_service: string | null;
   is_featured: boolean;
@@ -678,6 +712,9 @@ interface CaseStudyGalleryImage {
   id: string;
   media: MediaAsset;
   /** 🔤 */ caption: string;
+  is_before_after: boolean;
+  image_type: "before" | "after" | "screenshot" | "photo" | "diagram";
+  image_type_display: string;
   order: number;
 }
 ```
@@ -836,7 +873,7 @@ GET /crm/dashboard/
 |---|---|---|
 | GET | `/crm/dashboard/bookings/` | `?status=confirmed\|pending\|...` `?page=1` |
 | GET | `/crm/dashboard/bookings/{id}/` | Full detail |
-| POST | `/crm/dashboard/bookings/{id}/reschedule/` | `{ new_date, new_time, reason? }` |
+| POST | `/crm/dashboard/bookings/{id}/reschedule/` | `{ new_date, new_time, reason? }` — actually updates booking date/time and sets status to `rescheduled` |
 | POST | `/crm/dashboard/bookings/{id}/cancel/` | Cancels booking (only if not already cancelled/completed) |
 
 ### 8.4 Support Tickets
@@ -844,7 +881,7 @@ GET /crm/dashboard/
 | Method | Endpoint | Filters |
 |---|---|---|
 | GET | `/crm/dashboard/tickets/` | `?status=open\|in_progress\|...` `?ticket_type=bug\|feature\|...` `?page=1` |
-| POST | `/crm/dashboard/tickets/` | `{ title, description, ticket_type, priority?, related_lead?, related_service? }` |
+| POST | `/crm/dashboard/tickets/` | `{ title, description, ticket_type, priority?, related_lead?, related_service? }` — create ticket, optionally linked to a lead/service |
 | GET | `/crm/dashboard/tickets/{id}/` | Includes `messages` array with `unread_message_count` |
 | POST | `/crm/dashboard/tickets/{id}/messages/` | `{ body }` — reply to ticket |
 
@@ -865,10 +902,10 @@ Base: `/api/v1/notifications/` | Auth: `Bearer <token>`
 |---|---|---|
 | GET | `/notifications/` | List user notifications |
 | GET | `/notifications/unread-count/` | `{ count: number }` |
-| POST | `/notifications/{id}/mark-read/` | Mark single notification read |
-| POST | `/notifications/mark-all-read/` | Mark all read |
+| POST | `/notifications/{id}/mark-read/` | Mark single notification read (updates `is_read`, `read_at`, and `status` to `read`) |
+| POST | `/notifications/mark-all-read/` | Mark all read (updates `is_read`, `read_at`, and `status` to `read`) |
 | GET | `/notifications/preferences/` | Get notification preferences |
-| PUT | `/notifications/preferences/` | Update preferences |
+| PUT | `/notifications/preferences/` | Update preferences (validates `digest_frequency`: `instant`|`daily`|`weekly`; `is_enabled`: boolean). Preferences are enforced — disabled event/channel combos won't generate notifications. |
 
 ---
 
@@ -940,10 +977,54 @@ interface ChatResponse {
   session_id: string;
   reply: string;
   lead_captured: boolean;         // true once email extracted from conversation
+  lead_captured_this_turn: boolean; // true only on the turn a lead was created
 }
 ```
 
-> ⚠️ Proxy through a Next.js Route Handler — the Groq API key is server-side.
+> ⚗️ Proxy through a Next.js Route Handler — the Groq API key is server-side.
+
+### 11.2 Conversation History (JWT)
+
+Authenticated users can retrieve their past conversations and full transcripts.
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/assistant/conversations/` | List user's conversations (max 50, includes last message preview) |
+| GET | `/assistant/conversations/{id}/` | Full conversation with all messages |
+
+```ts
+interface ConversationListItem {
+  id: string;
+  session_id: string;
+  channel: string;                // "website_widget" | "whatsapp" | "facebook"
+  language: string;
+  lead_captured: boolean;
+  started_at: string;
+  message_count: number;
+  last_message: {
+    role: string;                 // "user" | "assistant"
+    content: string;              // first 200 chars
+    created_at: string;
+  } | null;
+}
+
+interface ConversationDetail {
+  id: string;
+  session_id: string;
+  channel: string;
+  language: string;
+  lead_captured: boolean;
+  started_at: string;
+  ended_at: string | null;
+  page_url: string;
+  messages: Array<{
+    id: string;
+    role: string;
+    content: string;
+    created_at: string;
+  }>;
+}
+```
 
 ---
 
@@ -955,7 +1036,7 @@ Base: `/api/v1/crm/guest/` | Header: `X-API-Key` | For non-logged-in visitors wi
 |---|---|---|
 | GET | `/crm/guest/requests/` | Guest's submitted requests |
 | GET | `/crm/guest/requests/{id}/` | Request detail |
-| POST | `/crm/guest/tickets/` | Create support ticket as guest |
+| POST | `/crm/guest/tickets/` | Create support ticket as guest. Body: `{ title, description, ticket_type, guest_email, priority?, related_service? }` |
 | GET | `/crm/guest/tickets/{id}/` | Ticket detail |
 | POST | `/crm/guest/tickets/{id}/messages/` | Reply to ticket |
 
@@ -1034,6 +1115,7 @@ Every text field that appears on the public-facing website is translatable. Non-
 | **TechExpertiseArea** | `name`, `description` |
 | **PortfolioProject** | `title`, `short_description`, `client_name` |
 | **PortfolioGalleryImage** | `caption` |
+| **AIKnowledgeEntry** | `question`, `answer` |
 
 > 💡 In the TypeScript interfaces throughout this guide, translatable fields are marked with `/** 🔤 */` for quick identification.
 
@@ -1397,6 +1479,10 @@ GET  /api/v1/seo/sitemap-urls/
 # AI Assistant (API key)
 POST /api/v1/assistant/chat/
 
+# AI Assistant History (JWT)
+GET  /api/v1/assistant/conversations/
+GET  /api/v1/assistant/conversations/{id}/
+
 # Guest CRM (API key + guest_token)
 GET  /api/v1/crm/guest/requests/
 GET  /api/v1/crm/guest/requests/{id}/
@@ -1411,4 +1497,4 @@ GET  /api/schema/docs/
 
 ---
 
-**65 endpoints, 8 API groups, 2 auth mechanisms. Fully documented with types, patterns, and best practices.**
+**67 endpoints, 8 API groups, 2 auth mechanisms. Fully documented with types, patterns, and best practices.**

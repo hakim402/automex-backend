@@ -32,6 +32,9 @@ staticfiles/
 .env.local
 .env.*.local
 
+.qoder/
+./qoder
+
 # migrations (optional - uncomment if you want clean rebuilds)
 # */migrations/*.py
 # */migrations/*.pyc

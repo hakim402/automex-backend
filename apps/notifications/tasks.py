@@ -102,15 +102,17 @@ def _provider_name(channel: str) -> str:
     }.get(channel, "unknown")
 
 
-def _get_smtp_connection(notification: Notification):
+def _get_smtp_connection_and_from_email(notification: Notification):
     """
     Build an SMTP connection for the notification. Looks up the linked
     ThirdPartyIntegration via NotificationProviderConfig, or falls back
     to Django's default settings.
+
+    Returns (connection, from_email) tuple to avoid querying twice.
     """
     from django.core.mail import get_connection
 
-    # Try to find a linked integration via provider config
+    # Try to find a linked integration via provider config (single query)
     provider_config = NotificationProviderConfig.objects.filter(
         channel=NotificationChannel.EMAIL,
         is_active=True,
@@ -129,16 +131,18 @@ def _get_smtp_connection(notification: Notification):
 
     if integration is None:
         # Use Django's default SMTP settings
-        return get_connection()
+        return get_connection(), settings.DEFAULT_FROM_EMAIL
 
     creds = integration.credentials or {}
-    return get_connection(
+    connection = get_connection(
         host=creds.get("host", settings.EMAIL_HOST),
         port=int(creds.get("port", settings.EMAIL_PORT)),
         use_tls=creds.get("use_tls", settings.EMAIL_USE_TLS),
         username=creds.get("username", settings.EMAIL_HOST_USER),
         password=creds.get("password", settings.EMAIL_HOST_PASSWORD),
     )
+    from_email = creds.get("from_email", settings.DEFAULT_FROM_EMAIL)
+    return connection, from_email
 
 
 def _dispatch(notification: Notification) -> None:
@@ -147,18 +151,7 @@ def _dispatch(notification: Notification) -> None:
         if not notification.recipient_email:
             raise ValueError("Notification has no recipient_email")
 
-        connection = _get_smtp_connection(notification)
-        from_email = settings.DEFAULT_FROM_EMAIL
-
-        # Try to get from_email from integration credentials
-        provider_config = NotificationProviderConfig.objects.filter(
-            channel=NotificationChannel.EMAIL,
-            is_active=True,
-        ).select_related("integration").first()
-
-        if provider_config and provider_config.integration_id:
-            creds = provider_config.integration.credentials or {}
-            from_email = creds.get("from_email", from_email)
+        connection, from_email = _get_smtp_connection_and_from_email(notification)
 
         send_mail(
             subject=notification.subject or "(no subject)",

@@ -16,7 +16,7 @@ from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema
 
-from ..models import Notification, NotificationPreference
+from ..models import Notification, NotificationPreference, NotificationStatus
 from .serializers import (
     NotificationListSerializer,
     NotificationPreferenceSerializer,
@@ -92,7 +92,8 @@ class NotificationMarkReadView(NotificationMixin, APIView):
         if not notification.is_read:
             notification.is_read = True
             notification.read_at = timezone.now()
-            notification.save(update_fields=["is_read", "read_at", "updated_at"])
+            notification.status = NotificationStatus.READ
+            notification.save(update_fields=["is_read", "read_at", "status", "updated_at"])
 
         return Response({"detail": "Marked as read."})
 
@@ -107,7 +108,7 @@ class NotificationMarkAllReadView(NotificationMixin, APIView):
         count = Notification.objects.filter(
             recipient_user=request.user,
             is_read=False,
-        ).update(is_read=True, read_at=timezone.now())
+        ).update(is_read=True, read_at=timezone.now(), status=NotificationStatus.READ)
 
         return Response({"detail": f"Marked {count} notification(s) as read."})
 

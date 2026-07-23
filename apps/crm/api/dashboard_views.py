@@ -87,7 +87,14 @@ class DashboardRequestListView(DashboardMixin, generics.ListAPIView):
         return self.list(request, *args, **kwargs)
 
     def get_queryset(self):
-        return Lead.objects.filter(user=self.request.user).order_by("-created_at")
+        from django.db.models import Prefetch
+        from apps.content.models import Service
+        return Lead.objects.filter(user=self.request.user)\
+            .select_related("service_interest", "industry")\
+            .prefetch_related(
+                Prefetch("quote_detail__requested_services", queryset=Service.objects.all()),
+            )\
+            .order_by("-created_at")
 
 
 class DashboardRequestDetailView(DashboardMixin, APIView):
@@ -190,7 +197,7 @@ class DashboardBookingRescheduleView(DashboardMixin, APIView):
     )
     def post(self, request, pk):
         try:
-            booking = ConsultationBooking.objects.get(pk=pk, user=request.user)
+            booking = ConsultationBooking.objects.select_related("lead").get(pk=pk, user=request.user)
         except ConsultationBooking.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -203,22 +210,38 @@ class DashboardBookingRescheduleView(DashboardMixin, APIView):
         serializer = DashboardRescheduleSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # Log the reschedule request (actual reschedule is admin-mediated)
+        new_date = serializer.validated_data["new_date"]
+        new_time = serializer.validated_data["new_time"]
+        reason = serializer.validated_data.get("reason", "Not specified")
+
+        # Validate new date is not in the past
+        if new_date < timezone.localdate():
+            return Response(
+                {"detail": "Cannot reschedule to a past date."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        old_date = booking.scheduled_date
+        old_time = booking.scheduled_time
+
+        # Actually update the booking
+        booking.scheduled_date = new_date
+        booking.scheduled_time = new_time
         booking.reschedule_count += 1
-        booking.save(update_fields=["reschedule_count", "updated_at"])
+        booking.status = ConsultationBooking.Status.RESCHEDULED
+        booking.save(update_fields=["scheduled_date", "scheduled_time", "reschedule_count", "status", "updated_at"])
 
         LeadActivity.objects.create(
             lead=booking.lead,
             activity_type=LeadActivity.ActivityType.OTHER,
             description=(
-                f"Reschedule requested to {serializer.validated_data['new_date']} "
-                f"{serializer.validated_data['new_time']}. "
-                f"Reason: {serializer.validated_data.get('reason', 'Not specified')}"
+                f"Rescheduled from {old_date} {old_time} to {new_date} {new_time}. "
+                f"Reason: {reason}"
             ),
             performed_by=request.user,
         )
 
-        return Response({"detail": "Reschedule request submitted."})
+        return Response({"detail": "Booking rescheduled.", "new_date": new_date, "new_time": new_time})
 
 
 class DashboardBookingCancelView(DashboardMixin, APIView):
@@ -294,12 +317,23 @@ class DashboardTicketListView(DashboardMixin, generics.ListCreateAPIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
+        # Resolve related_lead from UUID if provided
+        related_lead = None
+        related_lead_id = data.get("related_lead")
+        if related_lead_id:
+            try:
+                related_lead = Lead.objects.get(pk=related_lead_id, user=request.user)
+            except Lead.DoesNotExist:
+                pass
+
         ticket = services.create_support_ticket(
             title=data["title"],
             description=data["description"],
             ticket_type=data["ticket_type"],
             user=request.user,
             priority=data.get("priority", SupportTicket.Priority.NORMAL),
+            related_lead=related_lead,
+            related_service=data.get("related_service"),
         )
 
         return Response(
@@ -308,7 +342,10 @@ class DashboardTicketListView(DashboardMixin, generics.ListCreateAPIView):
         )
 
     def get_queryset(self):
-        return SupportTicket.objects.filter(user=self.request.user).order_by("-created_at")
+        from django.db.models import Count, Q
+        return SupportTicket.objects.filter(user=self.request.user)\
+            .annotate(_unread_count=Count("messages", filter=Q(messages__is_read=False)))\
+            .order_by("-created_at")
 
 
 class DashboardTicketDetailView(DashboardMixin, APIView):
@@ -320,7 +357,7 @@ class DashboardTicketDetailView(DashboardMixin, APIView):
     )
     def get(self, request, pk):
         try:
-            ticket = SupportTicket.objects.get(pk=pk, user=request.user)
+            ticket = SupportTicket.objects.prefetch_related("messages").get(pk=pk, user=request.user)
         except SupportTicket.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 

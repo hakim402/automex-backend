@@ -55,14 +55,31 @@ def notify(
     priority: str = NotificationPriority.NORMAL,
     language: str = "en",
     batch_id: str = "",
-) -> Notification:
+    skip_preference_check: bool = False,
+) -> Notification | None:
     """
     Creates a Notification row (status=PENDING) and enqueues async delivery.
     If an active NotificationTemplate exists for (event_type, channel,
     language), it's used to render subject/body from `context`; otherwise
     the caller-supplied `subject`/`body` are used as-is.
+
+    If `recipient_user` is set and `skip_preference_check` is False,
+    the user's NotificationPreference for this (event_type, channel) is
+    checked — if disabled, returns None instead of creating a notification.
     """
     context = context or {}
+
+    # Check user preferences before creating
+    if recipient_user and not skip_preference_check:
+        from .models import NotificationPreference
+        pref = NotificationPreference.objects.filter(
+            user=recipient_user,
+            event_type=event_type,
+            channel=channel,
+        ).first()
+        if pref and not pref.is_enabled:
+            logger.debug("notify: skipped %s/%s for user %s (preference disabled)", event_type, channel, recipient_user)
+            return None
 
     template = NotificationTemplate.objects.filter(
         event_type=event_type, channel=channel, language=language, is_active=True,
@@ -318,6 +335,7 @@ def notify_admins_of_new_lead(lead) -> list[Notification]:
                 context=context,
                 related_object=lead,
                 priority=NotificationPriority.HIGH,
+                skip_preference_check=True,
             )
         )
     return notifications
@@ -655,57 +673,78 @@ def send_digest_notifications(frequency: str = "daily") -> list[Notification]:
     Gather unread notifications for users with digest preferences and
     send them as a single batched email.
     """
+    from django.contrib.auth import get_user_model
     from .models import NotificationPreference
 
+    User = get_user_model()
     batch_id = f"digest-{frequency}-{timezone.now().strftime('%Y%m%d%H%M%S')}"
     notifications_sent = []
 
-    # Get users with this digest frequency
+    # Get preferences with this digest frequency, including user info
     prefs = NotificationPreference.objects.filter(
         digest_frequency=frequency,
         is_enabled=True,
     ).select_related("user")
 
-    user_ids = set(prefs.values_list("user_id", flat=True))
+    # Group preferences by user -> set of allowed (event_type, channel) pairs
+    user_allowed_pairs: dict[int, set[tuple[str, str]]] = {}
+    for pref in prefs:
+        user_allowed_pairs.setdefault(pref.user_id, set()).add((pref.event_type, pref.channel))
 
-    for user_id in user_ids:
-        # Gather unread notifications for this user
-        unread = Notification.objects.filter(
-            recipient_user_id=user_id,
-            is_read=False,
-            channel=NotificationChannel.IN_APP,
-        ).order_by("-created_at")[:50]
-
-        if not unread.exists():
-            continue
-
-        # Build digest body
-        lines = [f"Hi,\n\nHere's your {frequency} notification digest:\n"]
-        for n in unread:
-            lines.append(f"- [{n.get_event_type_display()}] {n.subject or '(no subject)'}")
-        lines.append(f"\nYou have {unread.count()} unread notification(s) in total.")
-        lines.append(f"\nBest regards,\nThe AUTOMEX Team")
-
-        body = "\n".join(lines)
-
-        # Get user email
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
+    for user_id, allowed_pairs in user_allowed_pairs.items():
         try:
             user = User.objects.get(pk=user_id)
         except User.DoesNotExist:
             continue
+
+        # Gather unread in-app notifications, filtered by allowed preferences
+        allowed_event_types = {et for et, ch in allowed_pairs if ch == NotificationChannel.IN_APP}
+        if not allowed_event_types:
+            continue
+
+        unread = list(
+            Notification.objects.filter(
+                recipient_user_id=user_id,
+                is_read=False,
+                channel=NotificationChannel.IN_APP,
+                event_type__in=allowed_event_types,
+            ).order_by("-created_at")[:50]
+        )
+
+        if not unread:
+            continue
+
+        total_count = len(unread)
+
+        # Build digest body
+        lines = [f"Hi {user.get_full_name() or user.email},\n\nHere's your {frequency} notification digest:\n"]
+        for n in unread:
+            lines.append(f"- [{n.get_event_type_display()}] {n.subject or '(no subject)'}")
+        lines.append(f"\nYou have {total_count} unread notification(s) in total.")
+        lines.append(f"\nBest regards,\nThe AUTOMEX Team")
+
+        body = "\n".join(lines)
 
         notification = notify(
             event_type=NotificationEventType.CUSTOM,
             channel=NotificationChannel.EMAIL,
             recipient_email=user.email,
             recipient_user=user,
-            subject=f"Your {frequency} digest — {unread.count()} notifications",
+            subject=f"Your {frequency} digest — {total_count} notifications",
             body=body,
             batch_id=batch_id,
             priority=NotificationPriority.LOW,
+            skip_preference_check=True,
         )
-        notifications_sent.append(notification)
+        if notification:
+            notifications_sent.append(notification)
+
+        # Mark included notifications as read to avoid re-sending
+        notification_ids = [n.id for n in unread]
+        Notification.objects.filter(id__in=notification_ids).update(
+            is_read=True,
+            read_at=timezone.now(),
+            status=NotificationStatus.READ,
+        )
 
     return notifications_sent

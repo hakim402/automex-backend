@@ -20,6 +20,7 @@ from apps.content.models import (
     FAQ,
     AICapability,
     BlogCategory,
+    BlogHeroImage,
     BlogPost,
     BlogTag,
     CaseStudy,
@@ -90,7 +91,7 @@ class ServiceCategoryViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelVi
     lookup_field = "slug"
 
     def get_queryset(self):
-        return ServiceCategory.objects.filter(is_active=True).language(self.language_code).order_by("order")
+        return ServiceCategory.objects.filter(is_active=True).language(self.language_code).select_related("icon_image").order_by("order")
 
 
 class TechnologyViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet):
@@ -99,7 +100,7 @@ class TechnologyViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet
     filterset_fields = ["category"]
 
     def get_queryset(self):
-        return Technology.objects.filter(is_active=True).language(self.language_code).order_by("category", "order")
+        return Technology.objects.filter(is_active=True).language(self.language_code).select_related("logo").order_by("category", "order")
 
 
 class IndustryViewSet(TranslatedSlugLookupMixin, PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet):
@@ -107,7 +108,7 @@ class IndustryViewSet(TranslatedSlugLookupMixin, PublicContentViewSetMixin, view
     lookup_field = "slug"
 
     def get_queryset(self):
-        return Industry.objects.filter(is_active=True).language(self.language_code).order_by("order")
+        return Industry.objects.filter(is_active=True).language(self.language_code).select_related("icon_image").order_by("order")
 
 
 class ProcessStepViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet):
@@ -156,7 +157,7 @@ class ServiceViewSet(TranslatedSlugLookupMixin, PublicContentViewSetMixin, views
             "service_testimonials__testimonial__client_avatar",
             Prefetch("documents", queryset=ServiceDocument.objects.language(lang).select_related("file")),
             Prefetch("slas", queryset=ServiceSLA.objects.language(lang)),
-            "related_services",
+            Prefetch("related_services", queryset=Service.objects.published().language(lang).select_related("category", "hero_image", "thumbnail_image")),
         )
 
     def get_serializer_class(self):
@@ -179,8 +180,10 @@ class CaseStudyViewSet(TranslatedSlugLookupMixin, PublicContentViewSetMixin, vie
 
     def get_queryset(self):
         qs = CaseStudy.objects.published().language(self.language_code)
-        return qs.select_related("client_industry", "client_logo", "thumbnail").prefetch_related(
-            "technologies", "gallery__media",
+        return qs.select_related(
+            "client_industry", "client_logo", "thumbnail", "testimonial",
+        ).prefetch_related(
+            "technologies", "gallery__media", "related_services",
         )
 
     def get_serializer_class(self):
@@ -194,7 +197,6 @@ class CaseStudyViewSet(TranslatedSlugLookupMixin, PublicContentViewSetMixin, vie
 class BlogCategoryViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = BlogCategorySerializer
     lookup_field = "slug"
-    queryset = BlogCategory.objects.all().language("en")
 
     def get_queryset(self):
         return BlogCategory.objects.all().language(self.language_code).order_by("order")
@@ -203,7 +205,6 @@ class BlogCategoryViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewS
 class BlogTagViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = BlogTagSerializer
     lookup_field = "slug"
-    queryset = BlogTag.objects.all().language("en")
 
     def get_queryset(self):
         return BlogTag.objects.all().language(self.language_code).order_by("slug")
@@ -221,7 +222,15 @@ class BlogPostViewSet(TranslatedSlugLookupMixin, PublicContentViewSetMixin, view
 
     def get_queryset(self):
         qs = BlogPost.objects.published().language(self.language_code)
-        return qs.select_related("author", "category", "cover_image").prefetch_related("tags")
+        lang = self.language_code
+        return qs.select_related(
+            "author", "category", "cover_image", "thumbnail_image",
+        ).prefetch_related(
+            "tags",
+            Prefetch("hero_images", queryset=BlogHeroImage.objects.language(lang).select_related("image")),
+            "related_services",
+            "related_case_studies",
+        )
 
     def get_serializer_class(self):
         return BlogPostDetailSerializer if self.action == "retrieve" else BlogPostListSerializer
@@ -235,7 +244,10 @@ class TeamMemberViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet
     serializer_class = TeamMemberSerializer
 
     def get_queryset(self):
-        return TeamMember.objects.filter(is_active=True).language(self.language_code).select_related("photo").order_by("order")
+        return TeamMember.objects.filter(is_active=True).language(self.language_code)\
+            .select_related("photo")\
+            .prefetch_related("projects_showcase")\
+            .order_by("order")
 
 
 class TestimonialViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSet):
@@ -245,6 +257,7 @@ class TestimonialViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewSe
     def get_queryset(self):
         return Testimonial.objects.filter(is_published=True).language(self.language_code).select_related(
             "client_avatar", "related_case_study", "related_service",
+            "client_industry", "video_thumbnail",
         ).order_by("order")
 
 
@@ -266,7 +279,10 @@ class CertificationViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelView
     filterset_fields = ["related_services"]
 
     def get_queryset(self):
-        return Certification.objects.filter(is_active=True).language(self.language_code).select_related("badge_image").order_by("order")
+        return Certification.objects.filter(is_active=True).language(self.language_code)\
+            .select_related("badge_image")\
+            .prefetch_related("related_services")\
+            .order_by("order")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -281,7 +297,7 @@ class AICapabilityViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModelViewS
     def get_queryset(self):
         return AICapability.objects.filter(is_active=True).language(self.language_code)\
             .select_related("cover_image")\
-            .prefetch_related("technologies")\
+            .prefetch_related("technologies", "related_services")\
             .order_by("order")
 
 
@@ -292,7 +308,10 @@ class TechExpertiseAreaViewSet(PublicContentViewSetMixin, viewsets.ReadOnlyModel
 
     def get_queryset(self):
         return TechExpertiseArea.objects.filter(is_active=True).language(self.language_code)\
-            .prefetch_related("technologies", "case_studies")\
+            .prefetch_related(
+                "technologies",
+                Prefetch("case_studies", queryset=CaseStudy.objects.select_related("thumbnail", "client_industry", "client_logo")),
+            )\
             .order_by("order")
 
 
